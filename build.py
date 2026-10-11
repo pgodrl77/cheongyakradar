@@ -557,11 +557,30 @@ AFF = [
  }
 ]
 
-def aff_html(slug):
+# 텐핑 CPA(상담 신청 건당 수당) 링크 — 2026-10-25 이후 가입하면 링크만 채우면 자동 노출. 비어 있으면 아무것도 안 보임.
+TENPING = {
+    "move": {"t": "이사 견적 무료 비교", "u": "포장이사 업체 여러 곳 견적을 한 번에 받아 보세요", "link": ""},
+    "clean": {"t": "입주청소 견적 받기", "u": "새집 분진·시멘트 가루, 입주 전에 한 번에", "link": ""},
+    "water": {"t": "정수기 렌탈 상담", "u": "입주 시기 맞춰 설치 일정까지 상담", "link": ""},
+    "bidet": {"t": "비데 렌탈 상담", "u": "욕실 수만큼 한 번에 설치 상담", "link": ""},
+    "air": {"t": "공기청정기 렌탈 상담", "u": "새집증후군 대비, 구매 대신 렌탈로", "link": ""},
+}
+
+
+def cpa_html(keys, title="입주 준비 무료 상담"):
+    picks = [TENPING[k] for k in keys if TENPING.get(k, {}).get("link")]
+    if not picks:
+        return ""
+    cards = "".join(f'<a class="card aff" href="{esc(a["link"])}" rel="sponsored nofollow noopener" target="_blank"><span><b>{esc(a["t"])} →</b>'
+                    f'<span class="small muted">{esc(a["u"])}</span></span></a>' for a in picks)
+    return f'<h2>{esc(title)}<span class="tag">광고·제휴</span></h2><div class="grid">{cards}</div>'
+
+
+def aff_html(slug, n=4):
     import hashlib
     k = int(hashlib.md5(slug.encode()).hexdigest(), 16)
-    n = len(AFF); start = k % n
-    picks = [AFF[(start + i) % n] for i in range(4)]
+    start = k % len(AFF)
+    picks = [AFF[(start + i) % len(AFF)] for i in range(min(n, len(AFF)))]
     cards = "".join(
         f'<a class="card aff" href="{esc(a["link"])}" rel="sponsored nofollow noopener" target="_blank">'
         f'<img src="{esc(a["img"].replace("1000x1000ex", "230x230ex"))}" alt="{esc(a["t"])}" loading="lazy" width="72" height="72">'
@@ -638,6 +657,10 @@ def build_detail(it, items):
         res_html = (f"<h2>{esc(name)} 경쟁률·당첨 가점 결과</h2>" + (f'<div class="note">{"<br>".join(lines)}</div>' if lines else "")
                     + (("<h3>주택형별 경쟁률</h3>" + ctable) if ctable else "") + (("<h3>당첨 가점(최저·평균·최고)</h3>" + stable) if stable else ""))
     faq_html, faq_ld = faq_block(detail_faq(it))
+    # 수익 배치(2026-10-11): 접수 전·중·발표 대기 단지는 애드센스만, 마감(발표 후) 단지만 입주 준비 상담·상품
+    move_in = ""
+    if cls == "done":
+        move_in = cpa_html(["clean", "water", "bidet", "air"], "입주 준비 무료 상담") + '<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>' + aff_html(it["slug"])
     near = [x for x in items if x["region"] == it["region"] and x is not it][:6]
     near_html = "".join(f'<a class="card" href="{x["slug"]}.html"><div class="small muted">{esc(short_addr(x["d"].get("HSSPLY_ADRES")))}</div><b>{esc(x["d"].get("HOUSE_NM"))}</b><div class="small">{esc(x["status"][1])}</div></a>' for x in near)
     url = r.get("PBLANC_URL") or ""
@@ -659,8 +682,7 @@ def build_detail(it, items):
 <h2>단지 정보</h2>{kv(info)}
 <h2>주택형별 분양가</h2>{mtable}
 <h2>한눈에 보는 분석</h2><div class="note">{'<br>'.join(analysis) or '분석할 주택형 정보가 아직 없습니다.'}</div>
-<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>
-{aff_html(it['slug'])}
+{move_in}
 {ad_slot()}
 <h2>원문 확인</h2><p>{' · '.join(links) or '청약홈(applyhome.co.kr)에서 단지명으로 검색해 공고 원문을 확인하세요.'}</p>
 {faq_html}
@@ -920,6 +942,7 @@ def build_public(rows):
 <h1>LH 공공분양·임대 공고 모음 — 청약홈에 없는 공고까지</h1>
 <p class="lead">행복주택·국민임대·공공분양 등 LH(한국토지주택공사) 청약센터 공고 {len(open_rows)}건을 모았습니다. 공고명을 누르면 LH 청약플러스 원문으로 이동합니다.</p>
 <p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 매일 아침 갱신 · 서울 SH 공고는 <a href="https://www.i-sh.co.kr" rel="nofollow noopener" target="_blank">SH 인터넷청약</a>, 경기 GH 공고는 <a href="https://apply.gh.or.kr" rel="nofollow noopener" target="_blank">GH 청약센터</a>에서 확인하세요.</p>
+{cpa_html(["move"], "이사 준비")}
 <div class="tbl"><table><thead><tr><th>공고명</th><th>지역</th><th>공고일</th><th>마감</th><th>상태</th></tr></thead><tbody>{trs or '<tr><td colspan="5">진행 중인 공고가 없습니다.</td></tr>'}</tbody></table></div>
 {ad_slot()}
 """
@@ -1045,10 +1068,11 @@ def build_guides():
     for g in guides.GUIDES:
         others = "".join(f'<li><a href="{o["slug"]}.html">{esc(o["short"])}</a></li>' for o in guides.GUIDES if o is not g)
         ex = guides.EXTRA.get(g["slug"], {})
+        extra_aff = ('<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>' + aff_html("guide-" + g["slug"], 2)) if g["slug"] == "dongho" else ""
         glance = ("<h2>한눈에 보기</h2>" + kv([(k, esc(v)) for k, v in ex["glance"]])) if ex.get("glance") else ""
         fb, ld = faq_block([(q, esc(a)) for q, a in ex.get("faq", [])])
         body = (f'<p class="small muted"><a href="../index.html">청약 일정</a> › <a href="index.html">청약 가이드</a></p><h1>{esc(g["title"])}</h1>'
-                f'<p class="small muted">최종 업데이트 {guides.CHECKED} · 제도 변경 시 수정</p>{glance}{g["body"]}{fb}{guides.SRC}{ad_slot()}<h2>다른 가이드</h2><ul>{others}</ul>')
+                f'<p class="small muted">최종 업데이트 {guides.CHECKED} · 제도 변경 시 수정</p>{glance}{g["body"]}{fb}{guides.SRC}{ad_slot()}{extra_aff}<h2>다른 가이드</h2><ul>{others}</ul>')
         out.append((f"guide/{g['slug']}.html", page(f"{g['title']} | {SITE_NAME}", g["desc"], body, f"guide/{g['slug']}.html", ld)))
     return out
 
@@ -1129,7 +1153,7 @@ def main():
     (OUT / "ads.txt").write_text(f"google.com, {ADSENSE_CLIENT.replace('ca-', '')}, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
     (OUT / "guide").mkdir(parents=True, exist_ok=True)
     import moveday
-    (OUT / "move.html").write_text(moveday.build(TODAY, page, esc, ad_slot, SITE_NAME, aff_html), encoding="utf-8")
+    (OUT / "move.html").write_text(moveday.build(TODAY, page, esc, ad_slot, SITE_NAME, aff_html, cpa_html), encoding="utf-8")
     (OUT / "week.html").write_text(build_week(items), encoding="utf-8")
     (OUT / "jupjup.html").write_text(build_jupjup(items), encoding="utf-8")
     extra = []

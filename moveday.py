@@ -12,7 +12,7 @@ def load():
     return {dt.date.fromisoformat(k): v for k, v in json.loads(p.read_text(encoding="utf-8")).items()}
 
 
-def build(today, page, esc, ad_slot, site_name, aff_html=None):
+def build(today, page, esc, ad_slot, site_name, aff_html=None, cpa_html=None):
     days = load()
     start = today.replace(day=1)
     months = []
@@ -46,6 +46,7 @@ def build(today, page, esc, ad_slot, site_name, aff_html=None):
 <p class="lead">손 없는 날은 음력으로 끝자리가 9·0인 날(9·10·19·20·29·30일)입니다. 한 달에 6일 안팎이라 이삿짐센터 예약이 몰리고 요금도 오르는 편이니, 입주 날짜가 정해졌다면 일찍 예약하는 것이 좋습니다.</p>
 <h2>가장 가까운 손 없는 날</h2>
 <ul class="note" style="list-style:none;padding-left:18px">{soon}</ul>
+{cpa_html(["move", "clean"], "손 없는 날 이사, 견적부터 먼저") if cpa_html else ''}
 {ad_slot()}
 <h2>월별 손 없는 날</h2>
 {''.join(blocks)}
@@ -58,7 +59,7 @@ def build(today, page, esc, ad_slot, site_name, aff_html=None):
 </ul>
 <p class="small muted">손 없는 날은 민속 풍습이며, 음력 날짜는 한국천문연구원 음양력 기준으로 계산했습니다.</p>
 <h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>
-{aff_html('moveday') if aff_html else ''}
+{aff_html('moveday', 2) if aff_html else ''}
 """
     title = f"손 없는 날 {yr} 이사 길일 달력 — 월별 날짜·음력 | {site_name}"
     desc = f"{yr}년 손 없는 날(이사 길일)을 월별로 정리했습니다. 음력 9·10·19·20·29·30일, 주말 여부와 입주 날짜 잡을 때 확인할 점."
