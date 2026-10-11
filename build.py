@@ -406,7 +406,7 @@ def page(title, desc, body, path, extra_head=""):
 <body>
 <header><div class="wrap hd">
 <a class="logo" href="{up}index.html">{LOGO}{SITE_NAME}</a>
-<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}calendar.html">청약 달력</a><a href="{up}calc.html">가점 계산기</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}about.html">서비스 소개</a></nav>
+<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}calendar.html">청약 달력</a><a href="{up}calc.html">가점 계산기</a><a href="{up}move.html">이사 날짜</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}about.html">서비스 소개</a></nav>
 </div></header>
 <div class="bar"><div class="wrap barin"><span><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</span><button type="button" id="inst" class="inst" hidden>홈 화면에 앱 설치</button></div></div>
 <div id="ios" class="ios" hidden><div class="wrap">아이폰은 Safari 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 쓸 수 있어요. <button type="button" id="iosx" aria-label="닫기">닫기</button></div></div>
@@ -414,7 +414,7 @@ def page(title, desc, body, path, extra_head=""):
 {body}
 </main>
 <footer><div class="wrap">
-<div><a href="{up}about.html">서비스 소개</a><a href="{up}contact.html">문의</a><a href="{up}privacy.html">개인정보처리방침</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}calc.html">청약 가점 계산기</a></div>
+<div><a href="{up}about.html">서비스 소개</a><a href="{up}contact.html">문의</a><a href="{up}privacy.html">개인정보처리방침</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}move.html">손 없는 날 달력</a><a href="{up}calc.html">청약 가점 계산기</a></div>
 <p>데이터 출처: 한국부동산원 청약홈 분양정보(공공데이터포털 오픈API). 정보는 자동으로 정리되며 오류가 있을 수 있습니다. 청약 전 반드시 청약홈의 입주자모집공고 원문을 확인하세요.</p>
 <p>일부 링크는 제휴 링크이며, 이를 통해 일정 수수료를 받을 수 있습니다.</p>
 <p>© {TODAY.year} {SITE_NAME}</p>
@@ -831,7 +831,9 @@ def main():
     (OUT / "contact.html").write_text(build_contact(), encoding="utf-8")
     (OUT / "ads.txt").write_text(f"google.com, {ADSENSE_CLIENT.replace('ca-', '')}, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
     (OUT / "guide").mkdir(parents=True, exist_ok=True)
-    urls = ["", "calendar.html", "calc.html", "about.html", "contact.html"]
+    import moveday
+    (OUT / "move.html").write_text(moveday.build(TODAY, page, esc, ad_slot, SITE_NAME, aff_html), encoding="utf-8")
+    urls = ["", "calendar.html", "calc.html", "move.html", "about.html", "contact.html"]
     for path, htmltxt in build_guides():
         (OUT / path).write_text(htmltxt, encoding="utf-8")
         urls.append(path)
