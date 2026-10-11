@@ -749,7 +749,7 @@ def build_contact():
 def build_guides():
     import guides
     out = []
-    links = "".join(f'<a class="card" href="{g["slug"]}.html"><b>{esc(g["short"])}</b><span class="small muted">{esc(g["desc"])}</span></a>' for g in guides.GUIDES)
+    links = "".join(f'<a class="card" href="{g["slug"]}.html"><b style="display:block;margin-bottom:6px">{esc(g["short"])}</b><span class="small muted">{esc(g["desc"])}</span></a>' for g in guides.GUIDES)
     idx = f"""<h1>청약 가이드</h1>
 <p class="lead">청약 전에 헷갈리기 쉬운 자격·순위·가점 규칙을 정리했습니다. 기준일을 함께 적어 두었으니 신청 전에는 공고문 원문도 꼭 확인하세요.</p>
 <div class="grid">{links}</div>"""
