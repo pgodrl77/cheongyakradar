@@ -253,7 +253,7 @@ def build_calendar(items):
 <script>
 var EV={json.dumps(data, ensure_ascii=False)};
 var T=new Date('{TODAY.isoformat()}T00:00:00'),cur=new Date(T.getFullYear(),T.getMonth(),1),sel='{TODAY.isoformat()}';
-var by={{}};EV.forEach(function(e){{(by[e.d]=by[e.d]||[]).push(e)}});
+var by={{}};EV.forEach(function(e){{(by[e.d]=by[e.d]||[]).push(e)}});var nx=EV.filter(function(e){{return e.d>=sel}})[0];if(nx){{sel=nx.d;var q=sel.split('-');cur=new Date(+q[0],+q[1]-1,1)}}
 function iso(y,m,d){{return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')}}
 function esc(s){{return String(s).replace(/[&<>"]/g,function(c){{return{{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}}[c]}})}}
 function draw(){{var y=cur.getFullYear(),m=cur.getMonth();document.getElementById('ym').textContent=y+'년 '+(m+1)+'월';
@@ -338,7 +338,7 @@ tr:last-child td{border-bottom:0}
 .alert{background:#FFF0F0;color:#C4161C;border-radius:12px;padding:12px 16px;margin:0 0 18px;font-size:14px}.alert b{margin-right:8px}.alert a{color:#C4161C;font-weight:500}
 .cal-hd{display:flex;align-items:center;justify-content:center;gap:18px;margin:8px 0}.cal-hd b{font-size:18px}.cal-hd button{width:36px;height:36px;border:1px solid #D1D6DB;border-radius:18px;background:#fff;font-size:18px;cursor:pointer}
 .legend{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid #E5E8EB;border-left:1px solid #E5E8EB}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid #E5E8EB;border-left:1px solid #E5E8EB}
 .cw{padding:8px;text-align:center;font-size:13px;color:#6B7684;background:#F9FAFB;border-right:1px solid #E5E8EB;border-bottom:1px solid #E5E8EB}
 .cd{min-height:92px;padding:6px;border:0;border-right:1px solid #E5E8EB;border-bottom:1px solid #E5E8EB;background:#fff;text-align:left;font:inherit;display:flex;flex-direction:column;gap:3px;cursor:pointer;overflow:hidden}
 .cd.e{cursor:default}.cd .dn{font-size:13px;font-weight:500}.cd.today .dn{color:#fff;background:#1B64DA;border-radius:10px;padding:0 7px;align-self:flex-start}.cd.sel{background:#F2F8FF}
