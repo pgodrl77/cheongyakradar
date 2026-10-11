@@ -247,6 +247,8 @@ def build_calendar(items):
 <div class="legend small"><span class="ev ev-sp">특별공급</span><span class="ev ev-r1">1순위·접수</span><span class="ev ev-win">당첨 발표</span><span class="ev ev-ct">계약</span></div>
 <div class="cal" id="cal"></div>
 <h2 id="dayt"></h2><div id="dayl"></div>
+<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>
+{aff_html('calendar-' + TODAY.isoformat())}
 {ad_slot()}
 <h2>앞으로 2주 청약 일정</h2>
 <div class="tbl"><table style="min-width:520px"><thead><tr><th>날짜</th><th>일정</th><th>단지</th><th>지역</th></tr></thead><tbody>{rows or '<tr><td colspan="4">2주 안에 예정된 일정이 없습니다.</td></tr>'}</tbody></table></div>
@@ -601,11 +603,11 @@ def build_detail(it, items):
 <h2>단지 정보</h2>{kv(info)}
 <h2>주택형별 분양가</h2>{mtable}
 <h2>한눈에 보는 분석</h2><div class="note">{'<br>'.join(analysis) or '분석할 주택형 정보가 아직 없습니다.'}</div>
+<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>
+{aff_html(it['slug'])}
 {ad_slot()}
 {('<h2>청약 경쟁률</h2>' + ctable) if ctable else ''}
 <h2>원문 확인</h2><p>{' · '.join(links) or '청약홈(applyhome.co.kr)에서 단지명으로 검색해 공고 원문을 확인하세요.'}</p>
-<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>
-{aff_html(it['slug'])}
 {('<h2>' + esc(it['region']) + ' 다른 청약</h2><div class="grid">' + near_html + '</div>') if near_html else ''}
 """
     desc = f"{name} 청약 일정(특별공급·1순위·당첨자 발표), 주택형별 분양가와 평당가, 경쟁률을 정리했습니다."
