@@ -351,13 +351,6 @@ def kv(rows):
 # 신축 입주 준비 쿠팡 파트너스 상품 (2026-10-11 선정: 커튼·공기·수납·가전·침구)
 AFF = [
  {
-  "t": "단열 암막커튼",
-  "u": "신축은 커튼이 없어요 — 입주 첫날부터 필요",
-  "p": 9990,
-  "link": "https://link.coupang.com/a/hKIYVtjOW4",
-  "img": "https://thumbnail14.coupangcdn.com/thumbnails/remote/212x212ex/image/1025_amir_coupang_oct_80k/195f/43a5558dafeb9062d8f3d76b1e44d911ead3d7809603c2e12d7f6b424d29.jpg"
- },
- {
   "t": "쿠쿠 공기청정기 96.8㎡",
   "u": "새집 냄새·미세먼지, 거실 넓이까지 커버",
   "p": 281600,
@@ -377,13 +370,6 @@ AFF = [
   "p": 9800,
   "link": "https://link.coupang.com/a/hKIZ4qzWMu",
   "img": "https://t2c.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/6362130807717-ec84de9a-8ec1-4b2d-839c-6bfe3a7c6c50.jpg"
- },
- {
-  "t": "오동나무 우드블라인드",
-  "u": "창 크기 맞춤제작, 방마다 깔끔하게",
-  "p": 35100,
-  "link": "https://link.coupang.com/a/hKIZkIknsG",
-  "img": "https://thumbnail5.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/bd60/706175e044d3e0d70d5b28fc37ceaa4a75f06b019cc238a1daca296c4dfd.jpg"
  },
  {
   "t": "물걸레 로봇청소기",
