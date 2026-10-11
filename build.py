@@ -364,6 +364,7 @@ LOGO = ('<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><cir
 
 ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "ca-pub-4989700606813042")  # 애드센스 게시자 ID (심사용 코드도 이것으로 들어감)
 CONTACT_EMAIL = "hello@sehucalc.com"
+NAVER_VERIFY = os.environ.get("NAVER_VERIFY", "")  # 네이버 서치어드바이저 소유확인 meta content 값
 
 
 def ad_slot():
@@ -377,6 +378,7 @@ def page(title, desc, body, path, extra_head=""):
     canonical = f"{SITE_URL}/{path}".rstrip("/") if path else SITE_URL + "/"
     ads = (f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE_CLIENT}" crossorigin="anonymous"></script>' if ADSENSE_CLIENT else "")
     up = "../" if "/" in path else ""
+    naver = f'<meta name="naver-site-verification" content="{NAVER_VERIFY}">' if NAVER_VERIFY else ""
     return f"""<!doctype html>
 <html lang="ko">
 <head>
@@ -399,7 +401,7 @@ def page(title, desc, body, path, extra_head=""):
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="{up}assets/style.css">
-{ads}{extra_head}
+{ads}{naver}{extra_head}
 </head>
 <body>
 <header><div class="wrap hd">
