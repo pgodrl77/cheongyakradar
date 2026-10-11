@@ -349,6 +349,10 @@ tr:last-child td{border-bottom:0}
 .more{font-size:11px;color:#6B7684}
 .btn{display:inline-block;padding:10px 16px;border-radius:8px;background:#1B64DA;color:#fff;font-weight:500}.btn:hover{text-decoration:none;background:#1957C2}
 @media(max-width:640px){.cd{min-height:64px;padding:4px}.cd .ev{font-size:0;width:8px;height:8px;padding:0;border-radius:4px}.cd .ev-sp{background:#F59E0B}.cd .ev-r1,.cd .ev-r2{background:#1B64DA}.cd .ev-win{background:#16A34A}.cd .ev-ct{background:#8B95A1}.more{display:none}}
+.barin{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.inst{height:30px;padding:0 12px;border:1px solid #1B64DA;border-radius:15px;background:#fff;color:#1B64DA;font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+.ios{background:#E8F3FF;color:#1B3A6B;font-size:13px;padding:10px 0}.ios button{border:0;background:none;color:#1B64DA;font:inherit;font-weight:500;cursor:pointer;margin-left:6px}
+[hidden]{display:none!important}
 footer{border-top:1px solid #E5E8EB;background:#F9FAFB;font-size:12px;color:#6B7684;padding:24px 0}
 footer a{color:#4E5968;margin-right:16px}
 @media(max-width:640px){h1{font-size:23px}.kv{grid-template-columns:110px 1fr}.hd{height:auto;padding:12px 20px;gap:12px}}
@@ -384,6 +388,13 @@ def page(title, desc, body, path, extra_head=""):
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{SITE_NAME}">
+<link rel="manifest" href="{up}manifest.webmanifest">
+<meta name="theme-color" content="#1B64DA">
+<link rel="icon" type="image/png" sizes="32x32" href="{up}favicon-32.png">
+<link rel="apple-touch-icon" href="{up}apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{SITE_NAME}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="{up}assets/style.css">
@@ -394,7 +405,8 @@ def page(title, desc, body, path, extra_head=""):
 <a class="logo" href="{up}index.html">{LOGO}{SITE_NAME}</a>
 <nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}calendar.html">청약 달력</a><a href="{up}calc.html">가점 계산기</a><a href="{up}index.html#done">경쟁률</a><a href="{up}about.html">서비스 소개</a></nav>
 </div></header>
-<div class="bar"><div class="wrap"><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</div></div>
+<div class="bar"><div class="wrap barin"><span><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</span><button type="button" id="inst" class="inst" hidden>홈 화면에 앱 설치</button></div></div>
+<div id="ios" class="ios" hidden><div class="wrap">아이폰은 Safari 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 쓸 수 있어요. <button type="button" id="iosx" aria-label="닫기">닫기</button></div></div>
 <main class="wrap">
 {body}
 </main>
@@ -404,6 +416,16 @@ def page(title, desc, body, path, extra_head=""):
 <p>일부 링크는 제휴 링크이며, 이를 통해 일정 수수료를 받을 수 있습니다.</p>
 <p>© {TODAY.year} {SITE_NAME}</p>
 </div></footer>
+<script>
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){{navigator.serviceWorker.register('/sw.js').catch(function(){{}})}}
+var dp,ib=document.getElementById('inst');window.addEventListener('beforeinstallprompt',function(e){{e.preventDefault();dp=e;ib.hidden=false}});
+ib.onclick=function(){{if(!dp)return;dp.prompt();dp.userChoice.finally(function(){{dp=null;ib.hidden=true}})}};
+window.addEventListener('appinstalled',function(){{ib.hidden=true}});
+(function(){{var ua=navigator.userAgent,st=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches,k='cy_ios_x';
+var seen;try{{seen=localStorage.getItem(k)}}catch(e){{}}
+if(/iPhone|iPad/.test(ua)&&/Safari/.test(ua)&&!/CriOS|FxiOS/.test(ua)&&!st&&!seen){{var b=document.getElementById('ios');b.hidden=false;
+document.getElementById('iosx').onclick=function(){{b.hidden=true;try{{localStorage.setItem(k,'1')}}catch(e){{}}}}}}}})();
+</script>
 </body>
 </html>
 """
@@ -714,6 +736,49 @@ def build_privacy():
     return page(f"개인정보처리방침 | {SITE_NAME}", "개인정보처리방침", body, "privacy.html")
 
 
+MANIFEST = {
+    "name": "청약레이더 - 아파트 청약 일정·분양가",
+    "short_name": "청약레이더",
+    "description": "아파트 청약 일정, 분양가, 경쟁률, 청약 달력을 매일 정리합니다.",
+    "lang": "ko",
+    "start_url": "/?source=pwa",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#FFFFFF",
+    "theme_color": "#1B64DA",
+    "icons": [
+        {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+        {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"},
+        {"src": "/icon-mask-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    ],
+    "shortcuts": [
+        {"name": "청약 달력", "url": "/calendar.html"},
+        {"name": "가점 계산기", "url": "/calc.html"},
+    ],
+}
+
+SW = """const C='cy-%s';
+const PRE=['/','/index.html','/calendar.html','/calc.html','/assets/style.css','/offline.html'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(PRE)).then(()=>self.skipWaiting()))});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
+self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET'||new URL(r.url).origin!==location.origin)return;
+e.respondWith(fetch(r).then(res=>{if(res.ok){const cp=res.clone();caches.open(C).then(c=>c.put(r,cp))}return res})
+.catch(()=>caches.match(r).then(m=>m||(r.mode==='navigate'?caches.match('/offline.html'):Response.error()))))});
+"""
+
+
+def write_pwa():
+    import shutil
+    (OUT / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=1), encoding="utf-8")
+    (OUT / "sw.js").write_text(SW % TODAY.isoformat(), encoding="utf-8")
+    body = '<h1>인터넷 연결이 끊겼어요</h1><p class="lead">연결되면 최신 청약 일정이 다시 보입니다. 이전에 열어 본 페이지는 오프라인에서도 볼 수 있어요.</p><p><a class="btn" href="/">다시 시도</a></p>'
+    (OUT / "offline.html").write_text(page(f"오프라인 | {SITE_NAME}", "인터넷 연결이 끊겼습니다.", body, "offline.html"), encoding="utf-8")
+    st = ROOT / "static"
+    if st.exists():
+        for f in st.iterdir():
+            shutil.copy2(f, OUT / f.name)
+
+
 def main():
     global KEY
     KEY = load_key()
@@ -738,6 +803,7 @@ def main():
     (OUT / "sitemap.xml").write_text("\n".join(sm), encoding="utf-8")
     (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
     (OUT / ".nojekyll").write_text("", encoding="utf-8")
+    write_pwa()
     print(f"완료: 단지 {len(items)}개, 페이지 {len(urls) + 1}개 → {OUT}")
 
 
