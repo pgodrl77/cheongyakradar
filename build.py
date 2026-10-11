@@ -1,0 +1,559 @@
+# -*- coding: utf-8 -*-
+"""청약레이더 정적 사이트 생성기.
+
+한국부동산원 청약홈 오픈API(공공데이터포털)에서 분양공고·주택형·경쟁률을 받아
+site/ 폴더에 정적 HTML 을 만든다. 표준 라이브러리만 사용.
+키: 환경변수 DATA_GO_KR_KEY, 없으면 ../.secrets/datagokr.env
+"""
+import datetime as dt
+import html
+import json
+import os
+import pathlib
+import time
+import urllib.parse
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+
+ROOT = pathlib.Path(__file__).resolve().parent
+OUT = ROOT / "site"
+SITE_URL = os.environ.get("SITE_URL", "https://cheongyakradar.com")
+SITE_NAME = "청약레이더"
+API = "https://api.odcloud.kr/api"
+KST = dt.timezone(dt.timedelta(hours=9))
+TODAY = dt.datetime.now(KST).date()
+LOOKBACK_DAYS = 120
+PYEONG = 3.3058
+
+KINDS = [
+    # (경로 접두, 상세, 주택형, 표시 이름)
+    ("apt", "ApplyhomeInfoDetailSvc/v1/getAPTLttotPblancDetail", "ApplyhomeInfoDetailSvc/v1/getAPTLttotPblancMdl", "아파트"),
+    ("rem", "ApplyhomeInfoDetailSvc/v1/getRemndrLttotPblancDetail", "ApplyhomeInfoDetailSvc/v1/getRemndrLttotPblancMdl", "무순위·잔여세대"),
+    ("opt", "ApplyhomeInfoDetailSvc/v1/getOPTLttotPblancDetail", "ApplyhomeInfoDetailSvc/v1/getOPTLttotPblancMdl", "임의공급"),
+]
+CMPET = "ApplyhomeInfoCmpetRtSvc/v1/getAPTLttotPblancCmpet"
+
+
+def load_key():
+    k = os.environ.get("DATA_GO_KR_KEY", "").strip()
+    if k:
+        return k
+    for p in (ROOT.parent / ".secrets" / "datagokr.env", ROOT.parent / "pgodrl77" / ".secrets" / "datagokr.env"):
+        if not p.exists():
+            continue
+        for line in p.read_text(encoding="utf-8-sig").splitlines():
+            if line.startswith("DATA_GO_KR_KEY="):
+                return line.split("=", 1)[1].strip()
+    raise SystemExit("DATA_GO_KR_KEY 없음")
+
+
+KEY = None
+
+
+def call(path, params):
+    q = dict(params)
+    q["serviceKey"] = KEY
+    url = f"{API}/{path}?" + urllib.parse.urlencode(q)
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(url, timeout=30) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except Exception as e:  # 네트워크·429
+            if attempt == 3:
+                print("API 실패", path, e)
+                return {"data": []}
+            time.sleep(2 * (attempt + 1))
+
+
+def fetch_all(path, cond):
+    rows, page = [], 1
+    while True:
+        params = {"page": page, "perPage": 500}
+        params.update(cond)
+        j = call(path, params)
+        data = j.get("data") or []
+        rows += data
+        if len(data) < 500:
+            return rows
+        page += 1
+
+
+def d(s):
+    try:
+        return dt.date.fromisoformat(str(s)[:10])
+    except Exception:
+        return None
+
+
+def esc(s):
+    return html.escape("" if s is None else str(s))
+
+
+def won(manwon):
+    """만원 단위 정수 → '5억 4,110만원'."""
+    try:
+        v = int(float(manwon))
+    except Exception:
+        return "-"
+    eok, man = divmod(v, 10000)
+    if eok and man:
+        return f"{eok}억 {man:,}만원"
+    if eok:
+        return f"{eok}억원"
+    return f"{man:,}만원"
+
+
+def area_label(ty):
+    try:
+        return f"{float(str(ty).strip().rstrip('ABCDEFGHIJKLMNOPQRSTUVWXYZ')):.0f}㎡"
+    except Exception:
+        return esc(ty)
+
+
+# ───────────────────────── 데이터 수집 ─────────────────────────
+
+def collect():
+    since = (TODAY - dt.timedelta(days=LOOKBACK_DAYS)).isoformat()
+    items = []
+    for prefix, detail_path, mdl_path, kind_name in KINDS:
+        rows = fetch_all(detail_path, {"cond[RCRIT_PBLANC_DE::GTE]": since})
+        def one(r, prefix=prefix, mdl_path=mdl_path, kind_name=kind_name):
+            no = r.get("HOUSE_MANAGE_NO")
+            mdl = fetch_all(mdl_path, {"cond[HOUSE_MANAGE_NO::EQ]": no})
+            cmp_ = fetch_all(CMPET, {"cond[HOUSE_MANAGE_NO::EQ]": no}) if prefix == "apt" else []
+            return {"prefix": prefix, "kind": kind_name, "d": r, "mdl": mdl, "cmp": cmp_}
+        rows = [r for r in rows if r.get("HOUSE_MANAGE_NO")]
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            items += list(ex.map(one, rows))
+        print(kind_name, len(rows), "건", flush=True)
+    return items
+
+
+def first_rcpt(r):
+    for k in ("SPSPLY_RCEPT_BGNDE", "GNRL_RNK1_CRSPAREA_RCPTDE", "RCEPT_BGNDE", "SUBSCRPT_RCEPT_BGNDE"):
+        if d(r.get(k)):
+            return d(r.get(k))
+    return None
+
+
+def last_rcpt(r):
+    for k in ("GNRL_RNK2_ETC_AREA_ENDDE", "GNRL_RNK2_CRSPAREA_ENDDE", "GNRL_RNK1_ETC_AREA_ENDDE", "GNRL_RNK1_CRSPAREA_ENDDE", "RCEPT_ENDDE", "SUBSCRPT_RCEPT_ENDDE"):
+        if d(r.get(k)):
+            return d(r.get(k))
+    return first_rcpt(r)
+
+
+def status(r):
+    s, e, w = first_rcpt(r), last_rcpt(r), d(r.get("PRZWNER_PRESNATN_DE"))
+    if s and TODAY < s:
+        return ("soon", f"D-{(s - TODAY).days}")
+    if s and e and s <= TODAY <= e:
+        return ("open", "접수 중")
+    if w and TODAY <= w:
+        return ("wait", "발표 대기")
+    return ("done", "마감")
+
+
+def enrich(items):
+    """평당가(3.3㎡당 최고 분양가) 계산과 같은 시·도 평균 비교."""
+    by_region = {}
+    for it in items:
+        best = []
+        for m in it["mdl"]:
+            try:
+                amt = float(m.get("LTTOT_TOP_AMOUNT") or 0)
+                ar = float(m.get("SUPLY_AR") or 0)
+            except Exception:
+                continue
+            if amt > 0 and ar > 0:
+                best.append(amt / (ar / PYEONG))
+        it["ppp"] = round(sum(best) / len(best)) if best else None
+        it["region"] = it["d"].get("SUBSCRPT_AREA_CODE_NM") or "기타"
+        if it["ppp"] and it["prefix"] == "apt":
+            by_region.setdefault(it["region"], []).append(it["ppp"])
+    for it in items:
+        vals = by_region.get(it["region"], [])
+        it["region_avg"] = round(sum(vals) / len(vals)) if len(vals) >= 2 else None
+        it["status"] = status(it["d"])
+        it["first"] = first_rcpt(it["d"])
+        it["slug"] = f"{it['prefix']}-{it['d'].get('HOUSE_MANAGE_NO')}-{it['d'].get('PBLANC_NO', '')}"
+    order = {"open": 0, "soon": 1, "wait": 2, "done": 3}
+    soon_open = [x for x in items if x["status"][0] in ("open", "soon", "wait")]
+    soon_open.sort(key=lambda x: (order[x["status"][0]], x["first"] or dt.date(2100, 1, 1)))
+    done = [x for x in items if x["status"][0] == "done"]
+    done.sort(key=lambda x: x["first"] or dt.date(2000, 1, 1), reverse=True)
+    return soon_open + done
+
+
+# ───────────────────────── 화면 ─────────────────────────
+
+CSS = """
+*{box-sizing:border-box}
+body{margin:0;font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#191F28;background:#fff;font-size:15px;line-height:1.6;letter-spacing:-0.2px}
+a{color:#1B64DA;text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid #E5E8EB}
+.hd{height:64px;display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:8px;color:#191F28;font-weight:700;font-size:20px}
+.logo:hover{text-decoration:none}
+nav{display:flex;gap:22px;flex-wrap:wrap;font-weight:500}
+nav a{color:#333D4B}
+.bar{background:#F2F4F6;border-bottom:1px solid #E5E8EB;font-size:13px;color:#4E5968;padding:10px 0}
+.bar b{color:#1B64DA}
+main{padding:28px 0 60px}
+h1{margin:0 0 8px;font-size:28px;line-height:1.35}
+h2{margin:36px 0 12px;font-size:20px}
+.lead{margin:0 0 18px;color:#4E5968}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.pills button{height:38px;padding:0 14px;border-radius:19px;border:1px solid #D1D6DB;background:#fff;color:#333D4B;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.pills button.on{background:#1B64DA;border-color:#1B64DA;color:#fff}
+.tbl{overflow-x:auto;border:1px solid #E5E8EB;border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+.tbl table{min-width:760px}
+th{background:#F9FAFB;color:#4E5968;font-weight:500;text-align:left;padding:12px 16px;border-bottom:1px solid #E5E8EB}
+td{padding:13px 16px;border-bottom:1px solid #F2F4F6;vertical-align:top}
+tr:last-child td{border-bottom:0}
+.b{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700;white-space:nowrap}
+.b-open{background:#E8F3FF;color:#1B64DA}.b-soon{background:#FFF3E0;color:#B35400}.b-wait{background:#F2F4F6;color:#4E5968}.b-done{background:#F2F4F6;color:#8B95A1}
+.muted{color:#6B7684}.small{font-size:13px}
+.card{border:1px solid #E5E8EB;border-radius:12px;padding:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.ad{margin:28px 0;min-height:90px}
+.tag{font-size:12px;color:#8B95A1;border:1px solid #D1D6DB;border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:middle}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:0;border:1px solid #E5E8EB;border-radius:12px;overflow:hidden}
+.kv div{padding:11px 16px;border-bottom:1px solid #F2F4F6}
+.kv div:nth-child(odd){background:#F9FAFB;color:#4E5968}
+.note{background:#F9FAFB;border-radius:12px;padding:16px 18px;color:#333D4B}
+.calc label{display:block;font-weight:500;margin:14px 0 6px}
+.calc select{width:100%;height:44px;border:1px solid #D1D6DB;border-radius:8px;padding:0 10px;font:inherit;background:#fff}
+.score{font-size:44px;font-weight:700;color:#1B64DA}
+footer{border-top:1px solid #E5E8EB;background:#F9FAFB;font-size:12px;color:#6B7684;padding:24px 0}
+footer a{color:#4E5968;margin-right:16px}
+@media(max-width:640px){h1{font-size:23px}.kv{grid-template-columns:110px 1fr}.hd{height:auto;padding:12px 0;gap:12px}}
+"""
+
+LOGO = ('<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11" fill="none" stroke="#1B64DA" stroke-width="2.2"/>'
+        '<circle cx="13" cy="13" r="5.5" fill="none" stroke="#1B64DA" stroke-width="2.2"/><path d="M13 13 L21 6" stroke="#1B64DA" stroke-width="2.2" stroke-linecap="round"/>'
+        '<circle cx="19" cy="9" r="2" fill="#1B64DA"/></svg>')
+
+ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "")  # 승인 후 ca-pub-… 입력
+
+
+def ad_slot():
+    if not ADSENSE_CLIENT:
+        return '<div class="ad"></div>'
+    return ('<div class="ad"><ins class="adsbygoogle" style="display:block" data-ad-client="%s" data-ad-format="auto" data-full-width-responsive="true"></ins>'
+            '<script>(adsbygoogle=window.adsbygoogle||[]).push({});</script></div>' % ADSENSE_CLIENT)
+
+
+def page(title, desc, body, path, extra_head=""):
+    canonical = f"{SITE_URL}/{path}".rstrip("/") if path else SITE_URL + "/"
+    ads = (f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE_CLIENT}" crossorigin="anonymous"></script>' if ADSENSE_CLIENT else "")
+    up = "../" if "/" in path else ""
+    return f"""<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{esc(title)}</title>
+<meta name="description" content="{esc(desc)}">
+<link rel="canonical" href="{canonical}">
+<meta property="og:title" content="{esc(title)}">
+<meta property="og:description" content="{esc(desc)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{SITE_NAME}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="{up}assets/style.css">
+{ads}{extra_head}
+</head>
+<body>
+<header><div class="wrap hd">
+<a class="logo" href="{up}index.html">{LOGO}{SITE_NAME}</a>
+<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}calc.html">가점 계산기</a><a href="{up}index.html#done">경쟁률</a><a href="{up}about.html">서비스 소개</a></nav>
+</div></header>
+<div class="bar"><div class="wrap"><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</div></div>
+<main class="wrap">
+{body}
+</main>
+<footer><div class="wrap">
+<div><a href="{up}about.html">서비스 소개</a><a href="{up}privacy.html">개인정보처리방침</a><a href="{up}calc.html">청약 가점 계산기</a></div>
+<p>데이터 출처: 한국부동산원 청약홈 분양정보(공공데이터포털 오픈API). 정보는 자동으로 정리되며 오류가 있을 수 있습니다. 청약 전 반드시 청약홈의 입주자모집공고 원문을 확인하세요.</p>
+<p>일부 링크는 제휴 링크이며, 이를 통해 일정 수수료를 받을 수 있습니다.</p>
+<p>© {TODAY.year} {SITE_NAME}</p>
+</div></footer>
+</body>
+</html>
+"""
+
+
+def short_addr(a):
+    parts = (a or "").split()
+    return " ".join(parts[:2]) if parts else "-"
+
+
+def fmt_date(x):
+    v = d(x)
+    return f"{v:%m.%d}" if v else "-"
+
+
+def row_html(it, link_prefix):
+    r = it["d"]
+    cls, lab = it["status"]
+    units = r.get("TOT_SUPLY_HSHLDCO")
+    ppp = f"{round(it['ppp']):,}만원" if it.get("ppp") else "-"
+    return (f'<tr data-region="{esc(it["region"])}"><td><a href="{link_prefix}{it["slug"]}.html"><b>{esc(r.get("HOUSE_NM"))}</b></a>'
+            f'<div class="small muted">{esc(it["kind"])}</div></td>'
+            f'<td>{esc(short_addr(r.get("HSSPLY_ADRES")))}</td>'
+            f'<td>{fmt_date(r.get("SPSPLY_RCEPT_BGNDE"))}</td>'
+            f'<td>{fmt_date(r.get("GNRL_RNK1_CRSPAREA_RCPTDE") or r.get("RCEPT_BGNDE") or r.get("SUBSCRPT_RCEPT_BGNDE"))}</td>'
+            f'<td>{fmt_date(r.get("PRZWNER_PRESNATN_DE"))}</td>'
+            f'<td>{esc(units) + "세대" if units else "-"}</td>'
+            f'<td>{ppp}</td>'
+            f'<td><span class="b b-{cls}">{esc(lab)}</span></td></tr>')
+
+
+TABLE_HEAD = ('<div class="tbl"><table><thead><tr><th scope="col">단지명</th><th scope="col">위치</th><th scope="col">특별공급</th>'
+              '<th scope="col">1순위</th><th scope="col">당첨 발표</th><th scope="col">공급</th><th scope="col">평당 분양가(최고)</th><th scope="col">상태</th></tr></thead><tbody>')
+
+
+def build_index(items):
+    live = [x for x in items if x["status"][0] != "done"]
+    done = [x for x in items if x["status"][0] == "done"][:60]
+    regions = sorted({x["region"] for x in live})
+    pills = '<button type="button" class="on" data-r="">전체</button>' + "".join(f'<button type="button" data-r="{esc(r)}">{esc(r)}</button>' for r in regions)
+    n_open = sum(1 for x in live if x["status"][0] == "open")
+    body = f"""
+<h1>이번 주 청약 일정과 분양가, 한 화면에서</h1>
+<p class="lead">청약홈 분양공고를 매일 아침 정리합니다. 지금 접수 중인 단지 {n_open}곳, 접수 예정·발표 대기 단지 {len(live) - n_open}곳이 있습니다. 평당 분양가는 주택형별 최고 공급가를 공급면적으로 나눠 계산했습니다.</p>
+<div class="pills" role="group" aria-label="지역 선택">{pills}</div>
+<h2 id="live" style="margin-top:8px">접수 중 · 예정 · 발표 대기</h2>
+{TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in live) or '<tr><td colspan="8">현재 진행 중인 공고가 없습니다.</td></tr>'}</tbody></table></div>
+{ad_slot()}
+<h2 id="done">최근 마감된 청약</h2>
+{TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in done)}</tbody></table></div>
+<h2>내 점수로 당첨될 수 있을까?</h2>
+<div class="card"><p style="margin:0 0 10px">무주택 기간, 부양가족 수, 청약통장 가입 기간만 고르면 84점 만점 가점을 바로 계산합니다.</p><a href="calc.html"><b>청약 가점 계산기 열기 →</b></a></div>
+<script>
+document.querySelectorAll('.pills button').forEach(function(b){{b.addEventListener('click',function(){{
+document.querySelectorAll('.pills button').forEach(function(x){{x.classList.remove('on')}});b.classList.add('on');var r=b.getAttribute('data-r');
+document.querySelectorAll('#live + .tbl tbody tr').forEach(function(tr){{tr.style.display=(!r||tr.getAttribute('data-region')===r)?'':'none'}});}})}});
+</script>
+"""
+    return page(f"{SITE_NAME} - 아파트 청약 일정·분양가·경쟁률 한눈에", "이번 주 아파트 청약 일정, 단지별 분양가와 평당가, 무순위 줍줍 공고, 경쟁률을 매일 정리합니다.", body, "")
+
+
+def kv(rows):
+    return '<div class="kv">' + "".join(f"<div>{esc(k)}</div><div>{v}</div>" for k, v in rows if v and v != "-") + "</div>"
+
+
+def build_detail(it, items):
+    r = it["d"]
+    name = r.get("HOUSE_NM") or "단지"
+    cls, lab = it["status"]
+    sched = [
+        ("모집공고일", fmt_full(r.get("RCRIT_PBLANC_DE"))),
+        ("특별공급 접수", rng(r.get("SPSPLY_RCEPT_BGNDE"), r.get("SPSPLY_RCEPT_ENDDE"))),
+        ("1순위 (해당지역)", rng(r.get("GNRL_RNK1_CRSPAREA_RCPTDE"), r.get("GNRL_RNK1_CRSPAREA_ENDDE"))),
+        ("1순위 (기타지역)", rng(r.get("GNRL_RNK1_ETC_AREA_RCPTDE"), r.get("GNRL_RNK1_ETC_AREA_ENDDE"))),
+        ("2순위", rng(r.get("GNRL_RNK2_CRSPAREA_RCPTDE"), r.get("GNRL_RNK2_ETC_AREA_ENDDE"))),
+        ("청약 접수", rng(r.get("SUBSCRPT_RCEPT_BGNDE") or r.get("RCEPT_BGNDE"), r.get("SUBSCRPT_RCEPT_ENDDE") or r.get("RCEPT_ENDDE"))),
+        ("당첨자 발표", fmt_full(r.get("PRZWNER_PRESNATN_DE"))),
+        ("계약", rng(r.get("CNTRCT_CNCLS_BGNDE"), r.get("CNTRCT_CNCLS_ENDDE"))),
+        ("입주 예정", ym(r.get("MVN_PREARNGE_YM"))),
+    ]
+    info = [
+        ("위치", esc(r.get("HSSPLY_ADRES"))),
+        ("공급 유형", esc(f"{it['kind']} · {r.get('HOUSE_DTL_SECD_NM') or ''}".strip(" ·"))),
+        ("총 공급", f"{esc(r.get('TOT_SUPLY_HSHLDCO'))}세대" if r.get("TOT_SUPLY_HSHLDCO") else "-"),
+        ("시행사", esc(r.get("BSNS_MBY_NM"))),
+        ("시공사", esc(r.get("CNSTRCT_ENTRPS_NM"))),
+        ("분양가 상한제", "적용" if r.get("PARCPRC_ULS_AT") == "Y" else ("미적용" if r.get("PARCPRC_ULS_AT") == "N" else "-")),
+        ("문의", esc(r.get("MDHS_TELNO"))),
+    ]
+    mrows = []
+    for m in it["mdl"]:
+        try:
+            ar = float(m.get("SUPLY_AR") or 0)
+            amt = float(m.get("LTTOT_TOP_AMOUNT") or 0)
+        except Exception:
+            ar, amt = 0, 0
+        p = f"{round(amt / (ar / PYEONG)):,}만원" if ar and amt else "-"
+        mrows.append(f"<tr><td>{area_label(m.get('HOUSE_TY'))} <span class='small muted'>{esc(str(m.get('HOUSE_TY') or '').strip())}</span></td>"
+                     f"<td>{ar:.2f}㎡</td><td>{esc(m.get('SUPLY_HSHLDCO') or '-')}</td><td>{esc(m.get('SPSPLY_HSHLDCO') or '-')}</td>"
+                     f"<td>{won(amt) if amt else '-'}</td><td>{p}</td></tr>")
+    mtable = ('<div class="tbl"><table><thead><tr><th>주택형</th><th>공급면적</th><th>일반공급</th><th>특별공급</th><th>최고 분양가</th><th>평당가</th></tr></thead><tbody>'
+              + "".join(mrows) + "</tbody></table></div>") if mrows else '<p class="muted">주택형별 정보가 아직 등록되지 않았습니다.</p>'
+    # 분석 문장(데이터로 계산한 비교)
+    analysis = []
+    if it.get("ppp") and it.get("region_avg"):
+        diff = (it["ppp"] - it["region_avg"]) / it["region_avg"] * 100
+        word = "높습니다" if diff > 0 else "낮습니다"
+        analysis.append(f"이 단지의 평균 평당 분양가(최고가 기준)는 <b>{it['ppp']:,}만원</b>으로, 최근 {LOOKBACK_DAYS}일 동안 {esc(it['region'])}에서 공고된 아파트 평균({it['region_avg']:,}만원)보다 <b>{abs(diff):.1f}% {word}</b>.")
+    elif it.get("ppp"):
+        analysis.append(f"이 단지의 평균 평당 분양가(최고가 기준)는 <b>{it['ppp']:,}만원</b>입니다. 같은 지역 비교 대상이 부족해 지역 평균 비교는 생략했습니다.")
+    if it["mdl"]:
+        total_g = sum(int(m.get("SUPLY_HSHLDCO") or 0) for m in it["mdl"])
+        total_s = sum(int(m.get("SPSPLY_HSHLDCO") or 0) for m in it["mdl"])
+        if total_g + total_s:
+            analysis.append(f"전체 {total_g + total_s:,}세대 중 특별공급이 {total_s:,}세대({total_s / (total_g + total_s) * 100:.0f}%), 일반공급이 {total_g:,}세대입니다.")
+        small = [m for m in it["mdl"] if _ty(m) and _ty(m) <= 85]
+        if small and (r.get("HOUSE_DTL_SECD_NM") or "") == "민영":
+            analysis.append(f"전용 85㎡ 이하 주택형이 {len(small)}개 있습니다. 85㎡ 이하 민영주택은 가점제 비율이 높아 청약 가점이 중요합니다.")
+    ctable = build_cmpet(it["cmp"])
+    near = [x for x in items if x["region"] == it["region"] and x is not it][:6]
+    near_html = "".join(f'<a class="card" href="{x["slug"]}.html"><div class="small muted">{esc(short_addr(x["d"].get("HSSPLY_ADRES")))}</div><b>{esc(x["d"].get("HOUSE_NM"))}</b><div class="small">{esc(x["status"][1])}</div></a>' for x in near)
+    url = r.get("PBLANC_URL") or ""
+    hp = r.get("HMPG_ADRES") or ""
+    links = []
+    if url.startswith("http"):
+        links.append(f'<a href="{esc(url)}" rel="nofollow noopener" target="_blank">청약홈 입주자모집공고 원문 보기</a>')
+    if hp.startswith("http"):
+        links.append(f'<a href="{esc(hp)}" rel="nofollow noopener" target="_blank">분양 홈페이지</a>')
+    body = f"""
+<p class="small muted"><a href="../index.html">청약 일정</a> › {esc(it['region'])}</p>
+<h1>{esc(name)} 청약 일정·분양가 <span class="b b-{cls}" style="vertical-align:middle">{esc(lab)}</span></h1>
+<p class="lead">{esc(short_addr(r.get('HSSPLY_ADRES')))} · {esc(it['kind'])} · 공고일 {fmt_full(r.get('RCRIT_PBLANC_DE'))}</p>
+<h2>청약 일정</h2>{kv(sched)}
+<h2>단지 정보</h2>{kv(info)}
+<h2>주택형별 분양가</h2>{mtable}
+<h2>한눈에 보는 분석</h2><div class="note">{'<br>'.join(analysis) or '분석할 주택형 정보가 아직 없습니다.'}</div>
+{ad_slot()}
+{('<h2>청약 경쟁률</h2>' + ctable) if ctable else ''}
+<h2>원문 확인</h2><p>{' · '.join(links) or '청약홈(applyhome.co.kr)에서 단지명으로 검색해 공고 원문을 확인하세요.'}</p>
+<h2>입주 준비<span class="tag">광고·제휴</span></h2>
+<div class="grid"><div class="card"><b>이사 견적 비교</b><p class="small muted" style="margin:4px 0 0">입주일에 맞춰 업체 견적을 비교하세요.</p></div>
+<div class="card"><b>입주청소</b><p class="small muted" style="margin:4px 0 0">사전 점검 후 입주 전 청소 일정을 잡으세요.</p></div>
+<div class="card"><b>가전 렌탈 상담</b><p class="small muted" style="margin:4px 0 0">정수기·공기청정기 렌탈 조건을 비교해 드립니다.</p></div></div>
+{('<h2>' + esc(it['region']) + ' 다른 청약</h2><div class="grid">' + near_html + '</div>') if near_html else ''}
+"""
+    desc = f"{name} 청약 일정(특별공급·1순위·당첨자 발표), 주택형별 분양가와 평당가, 경쟁률을 정리했습니다."
+    return page(f"{name} 청약 일정·분양가·경쟁률 | {SITE_NAME}", desc, body, f"apt/{it['slug']}.html")
+
+
+def _ty(m):
+    try:
+        return float(str(m.get("HOUSE_TY") or "").strip().rstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+    except Exception:
+        return 0
+
+
+def _ar(m):
+    try:
+        return float(m.get("SUPLY_AR") or 0)
+    except Exception:
+        return 0
+
+
+def fmt_full(x):
+    v = d(x)
+    return f"{v:%Y.%m.%d}" if v else "-"
+
+
+def rng(a, b):
+    va, vb = d(a), d(b)
+    if not va:
+        return "-"
+    if vb and vb != va:
+        return f"{va:%Y.%m.%d} ~ {vb:%m.%d}"
+    return f"{va:%Y.%m.%d}"
+
+
+def ym(x):
+    s = str(x or "")
+    return f"{s[:4]}년 {int(s[4:6])}월" if len(s) >= 6 and s[:6].isdigit() else "-"
+
+
+RANK = {"1": "1순위", "2": "2순위"}
+
+
+def build_cmpet(rows):
+    if not rows:
+        return ""
+    out = []
+    for c in rows:
+        out.append(f"<tr><td>{area_label(c.get('HOUSE_TY'))}</td><td>{RANK.get(str(c.get('SUBSCRPT_RANK_CODE')), esc(c.get('SUBSCRPT_RANK_CODE')))}</td>"
+                   f"<td>{esc(c.get('RESIDE_SENM'))}</td><td>{esc(c.get('SUPLY_HSHLDCO') or '-')}</td><td>{esc(c.get('REQ_CNT') or '-')}</td><td>{esc(c.get('CMPET_RATE') or '-')}</td></tr>")
+    return ('<div class="tbl"><table><thead><tr><th>주택형</th><th>순위</th><th>거주 구분</th><th>공급</th><th>접수</th><th>경쟁률</th></tr></thead><tbody>'
+            + "".join(out) + "</tbody></table></div><p class='small muted'>(△N)은 미달 세대 수입니다.</p>")
+
+
+def build_calc():
+    def opts(pairs):
+        return '<option value="">선택하세요</option>' + "".join(f'<option value="{v}">{esc(t)}</option>' for t, v in pairs)
+    noh = [("주택 소유 중 (0점)", 0), ("1년 미만", 2)] + [(f"{y}년 이상 ~ {y + 1}년 미만", 2 + 2 * y) for y in range(1, 15)] + [("15년 이상", 32)]
+    fam = [(f"{n}명", 5 + 5 * n) for n in range(0, 6)] + [("6명 이상", 35)]
+    acc = [("6개월 미만", 1), ("6개월 이상 ~ 1년 미만", 2)] + [(f"{y}년 이상 ~ {y + 1}년 미만", 2 + y) for y in range(1, 15)] + [("15년 이상", 17)]
+    body = f"""
+<h1>청약 가점 계산기 (84점 만점)</h1>
+<p class="lead">민영주택 일반공급 가점제 기준입니다. 무주택 기간 32점, 부양가족 35점, 청약통장 가입 기간 17점을 더해 계산합니다.</p>
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+<form class="card calc" onsubmit="return false">
+<label for="a">무주택 기간</label><select id="a">{opts(noh)}</select>
+<label for="b">부양가족 수 (본인 제외)</label><select id="b">{opts(fam)}</select>
+<label for="c">청약통장 가입 기간</label><select id="c">{opts(acc)}</select>
+</form>
+<div class="card" style="background:#F9FAFB"><div class="muted">내 청약 가점</div><div><span class="score" id="s">-</span> <span class="muted">/ 84점</span></div>
+<div class="small" id="d" style="margin-top:8px">세 항목을 모두 고르면 점수가 나옵니다.</div></div>
+</div>
+{ad_slot()}
+<h2>점수 계산 기준</h2>
+<div class="note">
+<b>무주택 기간</b>: 만 30세가 된 날(30세 전에 혼인했다면 혼인신고일)부터 계산합니다. 1년 미만 2점, 이후 1년마다 2점씩 늘어 15년 이상이면 32점입니다.<br>
+<b>부양가족</b>: 본인을 뺀 수입니다. 0명 5점에서 1명마다 5점씩 늘어 6명 이상이면 35점입니다.<br>
+<b>청약통장 가입 기간</b>: 6개월 미만 1점, 6개월~1년 2점, 이후 1년마다 1점씩 늘어 15년 이상이면 17점입니다.<br>
+<span class="small muted">세부 인정 기준(직계존속 3년 이상 동일 세대 등)은 입주자모집공고를 따릅니다.</span>
+</div>
+<script>
+function v(id){{var x=document.getElementById(id).value;return x===''?null:+x}}
+function up(){{var a=v('a'),b=v('b'),c=v('c');if(a===null||b===null||c===null){{return}}var t=a+b+c;document.getElementById('s').textContent=t;
+document.getElementById('d').textContent='무주택 '+a+'점 + 부양가족 '+b+'점 + 통장 '+c+'점';}}
+['a','b','c'].forEach(function(i){{document.getElementById(i).addEventListener('change',up)}});
+</script>
+"""
+    return page(f"청약 가점 계산기 - 무주택·부양가족·통장 점수 계산 | {SITE_NAME}", "청약 가점을 84점 만점 기준으로 바로 계산합니다. 무주택 기간, 부양가족 수, 청약통장 가입 기간 점수표 포함.", body, "calc.html")
+
+
+def build_about():
+    body = f"""<h1>{SITE_NAME} 서비스 소개</h1>
+<p>{SITE_NAME}는 한국부동산원 청약홈이 공공데이터포털에 공개하는 분양정보를 매일 받아, 단지별 청약 일정과 주택형별 분양가·평당가, 경쟁률을 보기 쉽게 정리하는 사이트입니다.</p>
+<p>평당 분양가는 주택형별 최고 공급금액을 공급면적(3.3㎡ 기준)으로 나눈 값의 평균이며, 같은 시·도에서 최근 {LOOKBACK_DAYS}일 동안 공고된 아파트 평균과 비교합니다. 자동으로 정리된 정보이므로 실제 청약 전에는 반드시 청약홈의 입주자모집공고 원문을 확인하세요.</p>
+<p>문의: hello@sehucalc.com</p>"""
+    return page(f"서비스 소개 | {SITE_NAME}", f"{SITE_NAME} 서비스 소개와 데이터 출처", body, "about.html")
+
+
+def build_privacy():
+    body = f"""<h1>개인정보처리방침</h1>
+<p>{SITE_NAME}는 회원가입이 없으며 이름·연락처 등 개인정보를 수집하지 않습니다. 청약 가점 계산기에 입력한 값은 브라우저 안에서만 계산되고 서버로 전송되지 않습니다.</p>
+<p>이 사이트는 Google 애드센스 광고를 게재할 수 있으며, Google 등 제3자 광고 사업자는 쿠키를 사용해 이용자의 이전 방문 기록을 바탕으로 광고를 표시할 수 있습니다. 이용자는 Google 광고 설정에서 맞춤 광고를 끌 수 있습니다.</p>
+<p>일부 링크는 제휴 링크이며, 이를 통해 구매·상담이 이루어지면 일정 수수료를 받을 수 있습니다.</p>
+<p>시행일: {TODAY:%Y년 %m월 %d일}</p>"""
+    return page(f"개인정보처리방침 | {SITE_NAME}", "개인정보처리방침", body, "privacy.html")
+
+
+def main():
+    global KEY
+    KEY = load_key()
+    items = enrich(collect())
+    (OUT / "apt").mkdir(parents=True, exist_ok=True)
+    (OUT / "assets").mkdir(parents=True, exist_ok=True)
+    (OUT / "assets" / "style.css").write_text(CSS.strip(), encoding="utf-8")
+    (OUT / "index.html").write_text(build_index(items), encoding="utf-8")
+    (OUT / "calc.html").write_text(build_calc(), encoding="utf-8")
+    (OUT / "about.html").write_text(build_about(), encoding="utf-8")
+    (OUT / "privacy.html").write_text(build_privacy(), encoding="utf-8")
+    urls = ["", "calc.html", "about.html"]
+    for it in items:
+        (OUT / "apt" / f"{it['slug']}.html").write_text(build_detail(it, items), encoding="utf-8")
+        urls.append(f"apt/{it['slug']}.html")
+    sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    sm += [f"<url><loc>{SITE_URL}/{u}</loc><lastmod>{TODAY.isoformat()}</lastmod></url>" for u in urls]
+    sm.append("</urlset>")
+    (OUT / "sitemap.xml").write_text("\n".join(sm), encoding="utf-8")
+    (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
+    (OUT / ".nojekyll").write_text("", encoding="utf-8")
+    print(f"완료: 단지 {len(items)}개, 페이지 {len(urls) + 1}개 → {OUT}")
+
+
+if __name__ == "__main__":
+    main()

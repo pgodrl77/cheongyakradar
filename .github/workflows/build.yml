@@ -1,0 +1,49 @@
+name: 청약레이더 매일 갱신
+
+on:
+  schedule:
+    - cron: "40 20 * * *"   # 매일 05:40 KST
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 사이트 생성
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
+          SITE_URL: https://cheongyakradar.com
+        run: python build.py
+      - name: 생성 결과 확인
+        run: |
+          n=$(ls site/apt | wc -l)
+          echo "단지 페이지 $n 개"
+          test "$n" -gt 0
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
+    steps:
+      - id: d
+        uses: actions/deploy-pages@v4
