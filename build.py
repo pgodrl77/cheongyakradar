@@ -511,6 +511,13 @@ AFF = [
   "img": "https://t2c.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/6a32/d231403ff458513e5eaac082e01bb90ee7da9810199dfc45ff94a868eca3.jpg"
  },
  {
+  "t": "삼성 인피니트 AI 공기청정기",
+  "u": "가스 탈취 필터로 새집증후군 냄새·유해가스 케어",
+  "p": 1049000,
+  "link": "https://link.coupang.com/a/hLEymNreRE",
+  "img": "https://thumbnail12.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/2026/09/08/18/5/dae0699a-d3e0-4ae2-b51d-2232477c2e0e.jpg"
+ },
+ {
   "t": "LG 스타일러 오브제컬렉션",
   "u": "새 드레스룸에 들이는 의류관리기, 방문설치",
   "p": 1204030,
