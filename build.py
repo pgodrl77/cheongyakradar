@@ -511,13 +511,6 @@ AFF = [
   "img": "https://t2c.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/6a32/d231403ff458513e5eaac082e01bb90ee7da9810199dfc45ff94a868eca3.jpg"
  },
  {
-  "t": "다이슨 빅+콰이엇 포름알데히드",
-  "u": "새집증후군 원인 포름알데히드까지 분해",
-  "p": 719040,
-  "link": "https://link.coupang.com/a/hLDIorOf5o",
-  "img": "https://thumbnail15.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/2025/09/08/15/7/ae3e7ca9-9d93-482f-8322-b060650a8ad8.jpg"
- },
- {
   "t": "LG 스타일러 오브제컬렉션",
   "u": "새 드레스룸에 들이는 의류관리기, 방문설치",
   "p": 1204030,
