@@ -327,7 +327,7 @@ tr:last-child td{border-bottom:0}
 .muted{color:#6B7684}.small{font-size:13px}
 .card{border:1px solid #E5E8EB;border-radius:12px;padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
-.ad{margin:28px 0;min-height:90px}
+.ad{margin:28px 0}.ad:has(ins[data-ad-status="unfilled"]),.ad:empty{display:none}.ad ins[data-ad-status="unfilled"]{display:none!important}
 .aff{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px}.aff:hover{border-color:#1B64DA}.aff img{border-radius:8px;flex:none;object-fit:cover}.aff>span{display:flex;flex-direction:column;gap:2px}
 .tag{font-size:12px;color:#8B95A1;border:1px solid #D1D6DB;border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:middle}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:0;border:1px solid #E5E8EB;border-radius:12px;overflow:hidden}
