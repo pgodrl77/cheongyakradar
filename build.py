@@ -364,7 +364,7 @@ LOGO = ('<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><cir
 
 ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "ca-pub-4989700606813042")  # 애드센스 게시자 ID (심사용 코드도 이것으로 들어감)
 CONTACT_EMAIL = "hello@sehucalc.com"
-NAVER_VERIFY = os.environ.get("NAVER_VERIFY", "")  # 네이버 서치어드바이저 소유확인 meta content 값
+NAVER_VERIFY = os.environ.get("NAVER_VERIFY", "de319e6a623a51b9eb9a23bfb52155859ecbb81a")  # 네이버 서치어드바이저 소유확인 meta content 값
 
 
 def ad_slot():
