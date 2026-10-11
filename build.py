@@ -32,6 +32,8 @@ KINDS = [
     ("opt", "ApplyhomeInfoDetailSvc/v1/getOPTLttotPblancDetail", "ApplyhomeInfoDetailSvc/v1/getOPTLttotPblancMdl", "임의공급"),
 ]
 CMPET = "ApplyhomeInfoCmpetRtSvc/v1/getAPTLttotPblancCmpet"
+REM_CMPET = "ApplyhomeInfoCmpetRtSvc/v1/getRemndrLttotPblancCmpet"
+SCORE = "ApplyhomeInfoCmpetRtSvc/v1/getAptLttotPblancScore"
 
 
 def load_key():
@@ -120,8 +122,10 @@ def collect():
         def one(r, prefix=prefix, mdl_path=mdl_path, kind_name=kind_name):
             no = r.get("HOUSE_MANAGE_NO")
             mdl = fetch_all(mdl_path, {"cond[HOUSE_MANAGE_NO::EQ]": no})
-            cmp_ = fetch_all(CMPET, {"cond[HOUSE_MANAGE_NO::EQ]": no}) if prefix == "apt" else []
-            return {"prefix": prefix, "kind": kind_name, "d": r, "mdl": mdl, "cmp": cmp_}
+            cond = {"cond[HOUSE_MANAGE_NO::EQ]": no}
+            cmp_ = fetch_all(CMPET, cond) if prefix == "apt" else (fetch_all(REM_CMPET, cond) if prefix == "rem" else [])
+            score = fetch_all(SCORE, cond) if prefix == "apt" else []
+            return {"prefix": prefix, "kind": kind_name, "d": r, "mdl": mdl, "cmp": cmp_, "score": score}
         rows = [r for r in rows if r.get("HOUSE_MANAGE_NO")]
         with ThreadPoolExecutor(max_workers=8) as ex:
             items += list(ex.map(one, rows))
@@ -305,7 +309,8 @@ header{border-bottom:1px solid #E5E8EB}
 .hd{height:64px;display:flex;align-items:center;gap:28px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:8px;color:#191F28;font-weight:700;font-size:20px}
 .logo:hover{text-decoration:none}
-nav{display:flex;gap:22px;flex-wrap:wrap;font-weight:500}
+nav{display:flex;gap:20px;flex-wrap:wrap;font-weight:500}
+@media(max-width:640px){nav{gap:6px 14px;font-size:14px}}
 nav a{color:#333D4B}
 .bar{background:#F2F4F6;border-bottom:1px solid #E5E8EB;font-size:13px;color:#4E5968;padding:10px 0}
 .bar b{color:#1B64DA}
@@ -353,6 +358,8 @@ tr:last-child td{border-bottom:0}
 .inst{height:30px;padding:0 12px;border:1px solid #1B64DA;border-radius:15px;background:#fff;color:#1B64DA;font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
 .ios{background:#E8F3FF;color:#1B3A6B;font-size:13px;padding:10px 0}.ios button{border:0;background:none;color:#1B64DA;font:inherit;font-weight:500;cursor:pointer;margin-left:6px}
 [hidden]{display:none!important}
+.faq{border-bottom:1px solid #F2F4F6;padding:12px 0}.faq h3{font-size:16px;margin:0 0 6px}.faq p{margin:0;color:#333D4B}
+ul.wk{list-style:none;padding:0;margin:0 0 8px}ul.wk li{padding:8px 0;border-bottom:1px solid #F2F4F6}
 footer{border-top:1px solid #E5E8EB;background:#F9FAFB;font-size:12px;color:#6B7684;padding:24px 0}
 footer a{color:#4E5968;margin-right:16px}
 @media(max-width:640px){h1{font-size:23px}.kv{grid-template-columns:110px 1fr}.hd{height:auto;padding:12px 20px;gap:12px}}
@@ -406,7 +413,7 @@ def page(title, desc, body, path, extra_head=""):
 <body>
 <header><div class="wrap hd">
 <a class="logo" href="{up}index.html">{LOGO}{SITE_NAME}</a>
-<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}calendar.html">청약 달력</a><a href="{up}calc.html">가점 계산기</a><a href="{up}move.html">이사 날짜</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}about.html">서비스 소개</a></nav>
+<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}week.html">이번 주</a><a href="{up}jupjup.html">줍줍</a><a href="{up}calendar.html">청약 달력</a><a href="{up}calc.html">가점 계산기</a><a href="{up}move.html">이사 날짜</a><a href="{up}guide/index.html">청약 가이드</a></nav>
 </div></header>
 <div class="bar"><div class="wrap barin"><span><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</span><button type="button" id="inst" class="inst" hidden>홈 화면에 앱 설치</button></div></div>
 <div id="ios" class="ios" hidden><div class="wrap">아이폰은 Safari 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 쓸 수 있어요. <button type="button" id="iosx" aria-label="닫기">닫기</button></div></div>
@@ -414,7 +421,7 @@ def page(title, desc, body, path, extra_head=""):
 {body}
 </main>
 <footer><div class="wrap">
-<div><a href="{up}about.html">서비스 소개</a><a href="{up}contact.html">문의</a><a href="{up}privacy.html">개인정보처리방침</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}move.html">손 없는 날 달력</a><a href="{up}calc.html">청약 가점 계산기</a></div>
+<div><a href="{up}about.html">서비스 소개</a><a href="{up}contact.html">문의</a><a href="{up}privacy.html">개인정보처리방침</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}move.html">손 없는 날 달력</a><a href="{up}calc.html">청약 가점 계산기</a><a href="{up}week.html">이번 주 청약 일정</a><a href="{up}jupjup.html">무순위 줍줍 일정</a></div>
 <p>데이터 출처: 한국부동산원 청약홈 분양정보(공공데이터포털 오픈API). 정보는 자동으로 정리되며 오류가 있을 수 있습니다. 청약 전 반드시 청약홈의 입주자모집공고 원문을 확인하세요.</p>
 <p>일부 링크는 제휴 링크이며, 이를 통해 일정 수수료를 받을 수 있습니다.</p>
 <p>© {TODAY.year} {SITE_NAME}</p>
@@ -457,7 +464,12 @@ def row_html(it, link_prefix):
             f'<td>{fmt_date(r.get("PRZWNER_PRESNATN_DE"))}</td>'
             f'<td>{esc(units) + "세대" if units else "-"}</td>'
             f'<td>{ppp}</td>'
-            f'<td><span class="b b-{cls}">{esc(lab)}</span></td></tr>')
+            f'<td><span class="b b-{cls}">{esc(lab)}</span>{rate_tag(it)}</td></tr>')
+
+
+def rate_tag(it):
+    cs = cmp_summary(it)
+    return f'<div class="small muted" style="margin-top:4px">{cs["rate"]:.1f}:1</div>' if cs else ""
 
 
 TABLE_HEAD = ('<div class="tbl"><table><thead><tr><th scope="col">단지명</th><th scope="col">위치</th><th scope="col">특별공급</th>'
@@ -480,6 +492,7 @@ def build_index(items):
 {ad_slot()}
 <h2 id="done">최근 마감된 청약</h2>
 {TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in done)}</tbody></table></div>
+<div class="grid" style="margin-top:24px"><a class="card" href="week.html"><b style="display:block;margin-bottom:6px">이번 주 청약 일정 →</b><span class="small muted">요일별 특별공급·1순위·당첨 발표</span></a><a class="card" href="jupjup.html"><b style="display:block;margin-bottom:6px">무순위 줍줍 일정 →</b><span class="small muted">잔여세대·임의공급만 모아 보기</span></a></div>
 <h2>날짜별로 보고 싶다면</h2>
 <div class="card"><p style="margin:0 0 10px">특별공급·1순위 접수일과 당첨자 발표일을 달력 한 장에 모았습니다.</p><a href="calendar.html"><b>청약 달력 열기 →</b></a></div>
 <h2>내 점수로 당첨될 수 있을까?</h2>
@@ -610,6 +623,18 @@ def build_detail(it, items):
         if small:
             analysis.append(f"전용 85㎡ 이하 주택형이 {len(small)}개 있습니다. 85㎡ 이하 민영주택은 가점제 비율이 높아 청약 가점이 중요합니다.")
     ctable = build_cmpet(it["cmp"])
+    stable = build_score(it.get("score"))
+    cs, ss = cmp_summary(it), score_summary(it)
+    res_html = ""
+    if ctable or stable:
+        lines = []
+        if cs:
+            lines.append(f"1순위 기준 공급 {cs['sup']:,}세대에 {cs['req']:,}명이 접수해 <b>평균 {cs['rate']:.2f} 대 1</b>을 기록했습니다." + (f" 가장 치열한 주택형은 <b>{cs['top_ty']}</b>({cs['top_rate']:g} 대 1)입니다." if cs.get('top_rate') else ""))
+        if ss:
+            lines.append(f"가점제 당첨자 최저 점수는 <b>{ss['min']}점</b>({esc(ss['min_ty'])} {esc(ss['min_res'])}), 최고 점수는 {ss['max']}점입니다. 내 점수는 <a href=\"../calc.html\">가점 계산기</a>로 비교해 보세요.")
+        res_html = (f"<h2>{esc(name)} 경쟁률·당첨 가점 결과</h2>" + (f'<div class="note">{"<br>".join(lines)}</div>' if lines else "")
+                    + (("<h3>주택형별 경쟁률</h3>" + ctable) if ctable else "") + (("<h3>당첨 가점(최저·평균·최고)</h3>" + stable) if stable else ""))
+    faq_html, faq_ld = faq_block(detail_faq(it))
     near = [x for x in items if x["region"] == it["region"] and x is not it][:6]
     near_html = "".join(f'<a class="card" href="{x["slug"]}.html"><div class="small muted">{esc(short_addr(x["d"].get("HSSPLY_ADRES")))}</div><b>{esc(x["d"].get("HOUSE_NM"))}</b><div class="small">{esc(x["status"][1])}</div></a>' for x in near)
     url = r.get("PBLANC_URL") or ""
@@ -623,6 +648,9 @@ def build_detail(it, items):
 <p class="small muted"><a href="../index.html">청약 일정</a> › {esc(it['region'])}</p>
 <h1>{esc(name)} 청약 일정·분양가 <span class="b b-{cls}" style="vertical-align:middle">{esc(lab)}</span></h1>
 <p class="lead">{esc(short_addr(r.get('HSSPLY_ADRES')))} · {esc(it['kind'])} · 공고일 {fmt_full(r.get('RCRIT_PBLANC_DE'))}</p>
+<p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 청약홈 공고·경쟁률 자동 반영</p>
+<h2>한눈에 보기</h2>{glance_html(it)}
+{res_html}
 <h2>청약 일정</h2>{kv(sched)}
 {('<p style="margin:14px 0 0"><a class="btn" href="' + it['slug'] + '.ics" download>내 캘린더에 일정 추가</a> <span class="small muted">접수·발표 하루 전에 알림이 옵니다</span></p>') if events(it) else ''}
 <h2>단지 정보</h2>{kv(info)}
@@ -631,12 +659,22 @@ def build_detail(it, items):
 <h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>
 {aff_html(it['slug'])}
 {ad_slot()}
-{('<h2>청약 경쟁률</h2>' + ctable) if ctable else ''}
 <h2>원문 확인</h2><p>{' · '.join(links) or '청약홈(applyhome.co.kr)에서 단지명으로 검색해 공고 원문을 확인하세요.'}</p>
+{faq_html}
 {('<h2>' + esc(it['region']) + ' 다른 청약</h2><div class="grid">' + near_html + '</div>') if near_html else ''}
 """
-    desc = f"{name} 청약 일정(특별공급·1순위·당첨자 발표), 주택형별 분양가와 평당가, 경쟁률을 정리했습니다."
-    return page(f"{name} 청약 일정·분양가·경쟁률 | {SITE_NAME}", desc, body, f"apt/{it['slug']}.html")
+    if cs or ss:
+        bits = []
+        if cs:
+            bits.append(f"평균 경쟁률 {cs['rate']:.1f}대1")
+        if ss:
+            bits.append(f"당첨 가점 최저 {ss['min']}점")
+        title = f"{name} 경쟁률·당첨 가점 결과 ({', '.join(bits)}) | {SITE_NAME}"
+        desc = f"{name} 청약 결과: {', '.join(bits)}. 주택형별 경쟁률과 당첨 가점(최저·평균·최고), 분양가와 평당가를 정리했습니다."
+    else:
+        title = f"{name} 청약 일정·분양가·경쟁률 | {SITE_NAME}"
+        desc = f"{name} 청약 일정(특별공급·1순위·당첨자 발표), 주택형별 분양가와 평당가, 경쟁률을 정리했습니다."
+    return page(title, desc, body, f"apt/{it['slug']}.html", faq_ld)
 
 
 def _ty(m):
@@ -684,6 +722,219 @@ def build_cmpet(rows):
                    f"<td>{esc(c.get('RESIDE_SENM'))}</td><td>{esc(c.get('SUPLY_HSHLDCO') or '-')}</td><td>{esc(c.get('REQ_CNT') or '-')}</td><td>{esc(c.get('CMPET_RATE') or '-')}</td></tr>")
     return ('<div class="tbl"><table><thead><tr><th>주택형</th><th>순위</th><th>거주 구분</th><th>공급</th><th>접수</th><th>경쟁률</th></tr></thead><tbody>'
             + "".join(out) + "</tbody></table></div><p class='small muted'>(△N)은 미달 세대 수입니다.</p>")
+
+
+# ───────────────────────── 결과(경쟁률·가점)·한눈에 보기·FAQ ─────────────────────────
+
+def num(x):
+    try:
+        return float(str(x).replace(",", "").strip())
+    except Exception:
+        return None
+
+
+def cmp_summary(it):
+    rows = it.get("cmp") or []
+    if not rows:
+        return None
+    if it["prefix"] == "apt":
+        r1 = [c for c in rows if str(c.get("SUBSCRPT_RANK_CODE")) == "1"] or rows
+    else:
+        r1 = rows
+    req = sum(num(c.get("REQ_CNT")) or 0 for c in r1)
+    sup, seen = 0, set()
+    for c in r1:
+        ty = str(c.get("HOUSE_TY") or "").strip()
+        if ty not in seen:
+            seen.add(ty)
+            sup += num(c.get("SUPLY_HSHLDCO")) or 0
+    if not sup or not req:
+        return None
+    top = max(r1, key=lambda c: num(c.get("CMPET_RATE")) or 0)
+    return {"rate": req / sup, "req": int(req), "sup": int(sup),
+            "top_ty": area_label(top.get("HOUSE_TY")), "top_rate": num(top.get("CMPET_RATE"))}
+
+
+def score_summary(it):
+    rows = [s for s in (it.get("score") or []) if (num(s.get("LWET_SCORE")) or 0) > 0]
+    if not rows:
+        return None
+    local = [s for s in rows if str(s.get("RESIDE_SECD")) == "01"] or rows
+    low = min(local, key=lambda s: num(s.get("LWET_SCORE")))
+    return {"min": int(num(low.get("LWET_SCORE"))), "min_ty": area_label(low.get("HOUSE_TY")),
+            "min_res": low.get("RESIDE_SENM") or "",
+            "max": int(max(num(s.get("TOP_SCORE")) or 0 for s in rows))}
+
+
+def build_score(rows):
+    rows = [s for s in (rows or []) if any((num(s.get(k)) or 0) > 0 for k in ("LWET_SCORE", "AVRG_SCORE", "TOP_SCORE"))]
+    if not rows:
+        return ""
+    def sc(v):
+        n = num(v)
+        return f"{n:g}점" if n else "-"
+    out = "".join(f"<tr><td>{area_label(s.get('HOUSE_TY'))}</td><td>{esc(s.get('RESIDE_SENM'))}</td>"
+                  f"<td><b>{sc(s.get('LWET_SCORE'))}</b></td><td>{sc(s.get('AVRG_SCORE'))}</td><td>{sc(s.get('TOP_SCORE'))}</td></tr>" for s in rows)
+    return ('<div class="tbl"><table><thead><tr><th>주택형</th><th>거주 구분</th><th>최저 당첨 가점</th><th>평균</th><th>최고</th></tr></thead><tbody>'
+            + out + "</tbody></table></div><p class='small muted'>가점제 당첨자 기준입니다. 표에 없는 주택형은 추첨제이거나 미달 등으로 가점 결과가 공개되지 않은 경우입니다.</p>")
+
+
+def price_range(it):
+    v = [num(m.get("LTTOT_TOP_AMOUNT")) for m in it["mdl"]]
+    v = [x for x in v if x]
+    if not v:
+        return None
+    lo, hi = min(v), max(v)
+    return won(lo) if lo == hi else f"{won(lo)} ~ {won(hi)}"
+
+
+def next_event(it):
+    for v, _t, lab in sorted(events(it)):
+        if v >= TODAY:
+            return f"{lab} {v:%m월 %d일}({'월화수목금토일'[v.weekday()]})"
+    return None
+
+
+def glance_html(it):
+    cs, ss = cmp_summary(it), score_summary(it)
+    rows = [("상태", f'<span class="b b-{it["status"][0]}">{esc(it["status"][1])}</span>'),
+            ("다음 일정", esc(next_event(it) or "")),
+            ("공급", f"{esc(it['d'].get('TOT_SUPLY_HSHLDCO'))}세대" if it["d"].get("TOT_SUPLY_HSHLDCO") else ""),
+            ("분양가(최고가 기준)", esc(price_range(it) or "")),
+            ("평당 분양가", f"{it['ppp']:,}만원" if it.get("ppp") else ""),
+            ("경쟁률", f"<b>평균 {cs['rate']:.2f} : 1</b> (최고 {cs['top_ty']} {cs['top_rate']:g} : 1)" if cs and cs.get("top_rate") else (f"<b>평균 {cs['rate']:.2f} : 1</b>" if cs else "")),
+            ("당첨 가점", f"<b>최저 {ss['min']}점</b> ({esc(ss['min_ty'])} {esc(ss['min_res'])}) · 최고 {ss['max']}점" if ss else "")]
+    if it.get("gap"):
+        rows.append(("시세 대비", it["gap"]))
+    return kv(rows)
+
+
+def faq_block(qas):
+    if not qas:
+        return "", ""
+    body = "<h2>자주 묻는 질문</h2>" + "".join(f'<div class="faq"><h3>{esc(q)}</h3><p>{a}</p></div>' for q, a in qas)
+    import re
+    ld = {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": re.sub("<[^>]+>", "", a)}} for q, a in qas]}
+    return body, '<script type="application/ld+json">' + json.dumps(ld, ensure_ascii=False) + "</script>"
+
+
+def detail_faq(it):
+    r, name = it["d"], it["d"].get("HOUSE_NM") or "이 단지"
+    qas = []
+    parts = []
+    for k, lab in (("SPSPLY_RCEPT_BGNDE", "특별공급"), ("GNRL_RNK1_CRSPAREA_RCPTDE", "1순위(해당지역)"), ("RCEPT_BGNDE", "청약 접수"), ("SUBSCRPT_RCEPT_BGNDE", "청약 접수"), ("PRZWNER_PRESNATN_DE", "당첨자 발표"), ("CNTRCT_CNCLS_BGNDE", "계약")):
+        v = d(r.get(k))
+        if v and lab not in [p.split(" ")[0] for p in parts]:
+            parts.append(f"{lab} {v:%Y년 %m월 %d일}")
+    if parts:
+        qas.append((f"{name} 청약 일정은 언제인가요?", ", ".join(parts) + "입니다. 일정은 공고 정정으로 바뀔 수 있으니 청약홈 공고문도 확인하세요."))
+    pr = price_range(it)
+    if pr:
+        a = f"주택형별 최고 분양가는 {pr}입니다."
+        if it.get("ppp"):
+            a += f" 평당(3.3㎡) 분양가는 평균 {it['ppp']:,}만원입니다."
+        qas.append((f"{name} 분양가는 얼마인가요?", a))
+    cs = cmp_summary(it)
+    if cs:
+        a = f"1순위 기준 공급 {cs['sup']:,}세대에 {cs['req']:,}명이 접수해 평균 경쟁률은 {cs['rate']:.2f} 대 1입니다."
+        if cs.get("top_rate"):
+            a += f" 가장 경쟁이 높았던 주택형은 {cs['top_ty']}로 {cs['top_rate']:g} 대 1입니다."
+        qas.append((f"{name} 경쟁률은 얼마인가요?", a))
+    ss = score_summary(it)
+    if ss:
+        qas.append((f"{name} 당첨 가점 커트라인은 몇 점인가요?", f"가점제 당첨자 최저 점수는 {ss['min']}점({ss['min_ty']} {ss['min_res']})이고, 최고 점수는 {ss['max']}점입니다. 내 점수는 청약콕 가점 계산기로 바로 확인할 수 있습니다."))
+    return qas
+
+
+# ───────────────────────── 무순위(줍줍) 페이지 ─────────────────────────
+
+def jup_row(it):
+    r = it["d"]
+    cs = cmp_summary(it)
+    res = f"{cs['rate']:.1f} : 1" if cs else "-"
+    s = d(r.get("SUBSCRPT_RCEPT_BGNDE") or r.get("RCEPT_BGNDE"))
+    return (f'<tr><td><a href="apt/{it["slug"]}.html"><b>{esc(r.get("HOUSE_NM"))}</b></a><div class="small muted">{esc(it["kind"])}</div></td>'
+            f'<td>{esc(short_addr(r.get("HSSPLY_ADRES")))}</td><td>{f"{s:%m.%d}" if s else "-"}</td><td>{fmt_date(r.get("PRZWNER_PRESNATN_DE"))}</td>'
+            f'<td>{esc(r.get("TOT_SUPLY_HSHLDCO") or "-")}</td><td>{res}</td><td><span class="b b-{it["status"][0]}">{esc(it["status"][1])}</span></td></tr>')
+
+
+def build_jupjup(items):
+    jj = [x for x in items if x["prefix"] in ("rem", "opt")]
+    live = [x for x in jj if x["status"][0] != "done"]
+    done = [x for x in jj if x["status"][0] == "done"][:40]
+    head = ('<div class="tbl"><table><thead><tr><th>단지명</th><th>위치</th><th>접수</th><th>당첨 발표</th><th>공급</th><th>경쟁률</th><th>상태</th></tr></thead><tbody>')
+    hot = sorted([x for x in done if cmp_summary(x)], key=lambda x: -cmp_summary(x)["rate"])[:3]
+    hot_txt = ""
+    if hot:
+        hot_txt = "<p>최근 마감된 줍줍 중 경쟁이 가장 치열했던 곳은 " + ", ".join(
+            f'<a href="apt/{x["slug"]}.html">{esc(x["d"].get("HOUSE_NM"))}</a>({cmp_summary(x)["rate"]:.1f} : 1)' for x in hot) + "입니다.</p>"
+    body = f"""
+<p class="small muted"><a href="index.html">청약 일정</a> › 무순위 줍줍</p>
+<h1>무순위 청약(줍줍) 일정 — 잔여세대·임의공급 공고 모음</h1>
+<p class="lead">계약 포기·부적격으로 남은 집을 다시 뽑는 무순위(잔여세대)와 임의공급 공고만 모았습니다. 지금 접수 중이거나 곧 접수하는 곳이 {len(live)}곳입니다. 청약통장이 없어도 되지만, 접수가 하루 이틀로 짧으니 일정부터 확인하세요.</p>
+<p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 매일 아침 청약홈 공고 반영</p>
+<h2>접수 중 · 예정 · 발표 대기</h2>
+{head}{''.join(jup_row(x) for x in live) or '<tr><td colspan="7">지금 진행 중인 무순위·임의공급 공고가 없습니다. 새 공고는 매일 아침 반영됩니다.</td></tr>'}</tbody></table></div>
+{ad_slot()}
+<h2>무순위 청약 자격, 한눈에 보기</h2>
+<div class="kv"><div>주택 소유</div><div><b>무주택 세대구성원만</b> 신청 (2025년 6월 10일 시행)</div><div>거주지</div><div>단지마다 시장·군수·구청장이 정함 — 공고문 확인 필수</div><div>청약통장</div><div>필요 없음</div><div>당첨자 선정</div><div>추첨</div><div>실거주 확인</div><div>건강보험 요양급여내역 등 추가 제출</div></div>
+<p class="small muted" style="margin-top:8px">자세한 내용: <a href="guide/musunwi.html">무순위 청약(줍줍) 신청 자격 — 2025년 6월 개편 후 달라진 점</a></p>
+<h2>최근 마감된 무순위·임의공급</h2>
+{hot_txt}
+{head}{''.join(jup_row(x) for x in done)}</tbody></table></div>
+"""
+    qas = [("무순위 청약(줍줍)은 누가 신청할 수 있나요?", "2025년 6월 10일부터는 무주택 세대구성원만 신청할 수 있습니다. 거주지 요건은 단지마다 시장·군수·구청장이 정하므로 해당 단지 공고문을 확인해야 합니다."),
+           ("무순위 청약에도 청약통장이 필요한가요?", "필요 없습니다. 무순위·잔여세대는 통장 가입 여부와 관계없이 추첨으로 당첨자를 뽑습니다."),
+           ("무순위 청약은 어디서 신청하나요?", "한국부동산원 청약홈(applyhome.co.kr)에서 신청합니다. 청약콕 단지 페이지의 공고 원문 링크로 바로 이동할 수 있습니다.")]
+    fb, ld = faq_block(qas)
+    return page(f"무순위 청약(줍줍) 일정 {TODAY:%Y년 %m월} — 잔여세대·임의공급 모음 | {SITE_NAME}",
+                "이번 주 무순위 청약(줍줍)·잔여세대·임의공급 공고 일정과 경쟁률, 2025년 개편된 신청 자격을 매일 정리합니다.", body + fb, "jupjup.html", ld)
+
+
+# ───────────────────────── 이번 주 청약 일정 ─────────────────────────
+
+def week_block(items, start, title):
+    days = [start + dt.timedelta(days=i) for i in range(7)]
+    by = {x: [] for x in days}
+    for it in items:
+        for v, typ, lab in events(it):
+            if v in by:
+                by[v].append((typ, lab, it))
+    out, n = [], 0
+    for day in days:
+        evs = by[day]
+        if not evs:
+            continue
+        n += len(evs)
+        li = "".join(f'<li><span class="ev ev-{t}">{esc(lab)}</span> <a href="apt/{it["slug"]}.html">{esc(it["d"].get("HOUSE_NM"))}</a> <span class="small muted">{esc(short_addr(it["d"].get("HSSPLY_ADRES")))} · {esc(it["kind"])}</span></li>' for t, lab, it in evs)
+        today = " (오늘)" if day == TODAY else ""
+        out.append(f'<h3>{day:%m월 %d일} {"월화수목금토일"[day.weekday()]}요일{today}</h3><ul class="wk">{li}</ul>')
+    rng_txt = f"{days[0]:%m.%d}~{days[-1]:%m.%d}"
+    return f'<h2>{title} ({rng_txt})</h2>' + ("".join(out) or '<p class="muted">이 기간에 잡힌 청약 일정이 없습니다.</p>'), n, rng_txt
+
+
+def build_week(items):
+    mon = TODAY - dt.timedelta(days=TODAY.weekday())
+    this_html, n1, r1 = week_block(items, mon, "이번 주")
+    next_html, n2, _ = week_block(items, mon + dt.timedelta(days=7), "다음 주")
+    opens = [x for x in items if x["status"][0] in ("open", "soon") and x.get("first") and mon <= x["first"] <= mon + dt.timedelta(days=6)]
+    big = sorted(opens, key=lambda x: -(num(x["d"].get("TOT_SUPLY_HSHLDCO")) or 0))[:3]
+    big_txt = ""
+    if big:
+        big_txt = "이번 주 접수 단지 중 공급이 많은 곳은 " + ", ".join(f'<a href="apt/{x["slug"]}.html">{esc(x["d"].get("HOUSE_NM"))}</a>({esc(x["d"].get("TOT_SUPLY_HSHLDCO"))}세대)' for x in big) + "입니다."
+    body = f"""
+<p class="small muted"><a href="index.html">청약 일정</a> › 이번 주</p>
+<h1>이번 주 청약 일정 ({r1}) — 특별공급·1순위·당첨 발표</h1>
+<p class="lead">이번 주에 잡힌 청약 일정 {n1}건을 날짜순으로 정리했습니다. {big_txt}</p>
+<p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 매일 아침 자동 갱신 · 무순위만 보려면 <a href="jupjup.html">줍줍 일정</a></p>
+{this_html}
+{ad_slot()}
+{next_html}
+<div class="card" style="margin-top:24px"><p style="margin:0 0 10px">한 달 일정을 달력으로 보고 싶다면</p><a href="calendar.html"><b>청약 달력 열기 →</b></a></div>
+"""
+    return page(f"이번 주 청약 일정 ({r1}) — 아파트 특별공급·1순위·당첨자 발표 | {SITE_NAME}",
+                f"이번 주({r1}) 아파트 청약 일정 {n1}건: 특별공급·1순위 접수일, 당첨자 발표, 계약일을 날짜별로 정리했습니다. 매일 갱신.", body, "week.html")
 
 
 def build_calc():
@@ -758,8 +1009,12 @@ def build_guides():
     out.append(("guide/index.html", page(f"청약 가이드 - 1순위 조건·무순위 자격·가점 계산 | {SITE_NAME}", "아파트 청약 1순위 조건, 무순위(줍줍) 자격, 가점 계산 방법을 정리한 청약 가이드", idx, "guide/index.html")))
     for g in guides.GUIDES:
         others = "".join(f'<li><a href="{o["slug"]}.html">{esc(o["short"])}</a></li>' for o in guides.GUIDES if o is not g)
-        body = f'<p class="small muted"><a href="../index.html">청약 일정</a> › <a href="index.html">청약 가이드</a></p><h1>{esc(g["title"])}</h1>{g["body"]}{guides.SRC}{ad_slot()}<h2>다른 가이드</h2><ul>{others}</ul>'
-        out.append((f"guide/{g['slug']}.html", page(f"{g['title']} | {SITE_NAME}", g["desc"], body, f"guide/{g['slug']}.html")))
+        ex = guides.EXTRA.get(g["slug"], {})
+        glance = ("<h2>한눈에 보기</h2>" + kv([(k, esc(v)) for k, v in ex["glance"]])) if ex.get("glance") else ""
+        fb, ld = faq_block([(q, esc(a)) for q, a in ex.get("faq", [])])
+        body = (f'<p class="small muted"><a href="../index.html">청약 일정</a> › <a href="index.html">청약 가이드</a></p><h1>{esc(g["title"])}</h1>'
+                f'<p class="small muted">최종 업데이트 {guides.CHECKED} · 제도 변경 시 수정</p>{glance}{g["body"]}{fb}{guides.SRC}{ad_slot()}<h2>다른 가이드</h2><ul>{others}</ul>')
+        out.append((f"guide/{g['slug']}.html", page(f"{g['title']} | {SITE_NAME}", g["desc"], body, f"guide/{g['slug']}.html", ld)))
     return out
 
 
@@ -833,7 +1088,9 @@ def main():
     (OUT / "guide").mkdir(parents=True, exist_ok=True)
     import moveday
     (OUT / "move.html").write_text(moveday.build(TODAY, page, esc, ad_slot, SITE_NAME, aff_html), encoding="utf-8")
-    urls = ["", "calendar.html", "calc.html", "move.html", "about.html", "contact.html"]
+    (OUT / "week.html").write_text(build_week(items), encoding="utf-8")
+    (OUT / "jupjup.html").write_text(build_jupjup(items), encoding="utf-8")
+    urls = ["", "week.html", "jupjup.html", "calendar.html", "calc.html", "move.html", "about.html", "contact.html"]
     for path, htmltxt in build_guides():
         (OUT / path).write_text(htmltxt, encoding="utf-8")
         urls.append(path)
