@@ -185,6 +185,113 @@ def enrich(items):
     return soon_open + done
 
 
+# ───────────────────────── 달력·알림 ─────────────────────────
+
+def events(it):
+    """단지 하나의 주요 일정: (날짜, 종류, 라벨) 목록."""
+    r = it["d"]
+    ev = []
+    def add(k, typ, lab):
+        v = d(r.get(k))
+        if v:
+            ev.append((v, typ, lab))
+    add("SPSPLY_RCEPT_BGNDE", "sp", "특별공급")
+    add("GNRL_RNK1_CRSPAREA_RCPTDE", "r1", "1순위")
+    add("GNRL_RNK2_CRSPAREA_RCPTDE", "r2", "2순위")
+    if it["prefix"] != "apt":
+        add("SUBSCRPT_RCEPT_BGNDE", "r1", "청약 접수")
+        add("RCEPT_BGNDE", "r1", "청약 접수")
+    add("PRZWNER_PRESNATN_DE", "win", "당첨 발표")
+    add("CNTRCT_CNCLS_BGNDE", "ct", "계약")
+    seen, out = set(), []
+    for e in ev:
+        if (e[0], e[2]) not in seen:
+            seen.add((e[0], e[2])); out.append(e)
+    return out
+
+
+def closing_soon(items):
+    """오늘·내일 접수가 끝나는 단지."""
+    out = []
+    for it in items:
+        e = last_rcpt(it["d"])
+        if e and 0 <= (e - TODAY).days <= 1 and it["status"][0] in ("open", "soon"):
+            out.append((it, (e - TODAY).days))
+    return out
+
+
+def soon_bar(items, prefix):
+    cs = closing_soon(items)
+    if not cs:
+        return ""
+    links = " · ".join(f'<a href="{prefix}{it["slug"]}.html">{esc(it["d"].get("HOUSE_NM"))}</a> {"오늘" if n == 0 else "내일"} 마감' for it, n in cs[:4])
+    return f'<div class="alert"><b>마감 임박</b> {links}</div>'
+
+
+def build_calendar(items):
+    lo, hi = TODAY - dt.timedelta(days=45), TODAY + dt.timedelta(days=120)
+    data = []
+    for it in items:
+        for v, typ, lab in events(it):
+            if lo <= v <= hi:
+                data.append({"d": v.isoformat(), "t": typ, "l": lab, "n": it["d"].get("HOUSE_NM") or "", "r": it["region"], "s": it["slug"]})
+    data.sort(key=lambda x: (x["d"], x["t"]))
+    week = [x for x in data if 0 <= (d(x["d"]) - TODAY).days <= 13]
+    rows = "".join(f'<tr><td>{d(x["d"]):%m.%d}({"월화수목금토일"[d(x["d"]).weekday()]})</td><td><span class="ev ev-{x["t"]}">{esc(x["l"])}</span></td>'
+                   f'<td><a href="apt/{x["s"]}.html">{esc(x["n"])}</a></td><td>{esc(x["r"])}</td></tr>' for x in week)
+    body = f"""
+<h1>{TODAY.year}년 {TODAY.month}월 청약 달력</h1>
+<p class="lead">특별공급·1순위 접수일, 당첨자 발표일, 계약일을 날짜별로 모았습니다. 날짜를 누르면 그날 일정이 아래에 나옵니다. 단지 페이지에서 일정을 내 캘린더에 넣으면 마감 하루 전에 알림이 옵니다.</p>
+{soon_bar(items, 'apt/')}
+<div class="cal-hd"><button type="button" id="prev" aria-label="이전 달">‹</button><b id="ym"></b><button type="button" id="next" aria-label="다음 달">›</button></div>
+<div class="legend small"><span class="ev ev-sp">특별공급</span><span class="ev ev-r1">1순위·접수</span><span class="ev ev-win">당첨 발표</span><span class="ev ev-ct">계약</span></div>
+<div class="cal" id="cal"></div>
+<h2 id="dayt"></h2><div id="dayl"></div>
+{ad_slot()}
+<h2>앞으로 2주 청약 일정</h2>
+<div class="tbl"><table style="min-width:520px"><thead><tr><th>날짜</th><th>일정</th><th>단지</th><th>지역</th></tr></thead><tbody>{rows or '<tr><td colspan="4">2주 안에 예정된 일정이 없습니다.</td></tr>'}</tbody></table></div>
+<script>
+var EV={json.dumps(data, ensure_ascii=False)};
+var T=new Date('{TODAY.isoformat()}T00:00:00'),cur=new Date(T.getFullYear(),T.getMonth(),1),sel='{TODAY.isoformat()}';
+var by={{}};EV.forEach(function(e){{(by[e.d]=by[e.d]||[]).push(e)}});
+function iso(y,m,d){{return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')}}
+function esc(s){{return String(s).replace(/[&<>"]/g,function(c){{return{{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}}[c]}})}}
+function draw(){{var y=cur.getFullYear(),m=cur.getMonth();document.getElementById('ym').textContent=y+'년 '+(m+1)+'월';
+var h='';'일월화수목금토'.split('').forEach(function(w){{h+='<div class="cw">'+w+'</div>'}});
+var st=new Date(y,m,1).getDay(),n=new Date(y,m+1,0).getDate();for(var i=0;i<st;i++)h+='<div class="cd e"></div>';
+for(var d=1;d<=n;d++){{var k=iso(y,m,d),L=by[k]||[];var c='cd'+(k==='{TODAY.isoformat()}'?' today':'')+(k===sel?' sel':'');
+h+='<button type="button" class="'+c+'" data-k="'+k+'"><span class="dn">'+d+'</span>';
+L.slice(0,2).forEach(function(e){{h+='<span class="ev ev-'+e.t+'">'+esc(e.n.slice(0,7))+'</span>'}});if(L.length>2)h+='<span class="more">+'+(L.length-2)+'</span>';h+='</button>'}}
+document.getElementById('cal').innerHTML=h;document.querySelectorAll('#cal button').forEach(function(b){{b.onclick=function(){{sel=b.getAttribute('data-k');draw();day()}}}})}}
+function day(){{var L=by[sel]||[],p=sel.split('-');document.getElementById('dayt').textContent=(+p[1])+'월 '+(+p[2])+'일 일정 '+L.length+'건';
+document.getElementById('dayl').innerHTML=L.length?'<div class="grid">'+L.map(function(e){{return '<a class="card" href="apt/'+e.s+'.html"><span class="ev ev-'+e.t+'">'+esc(e.l)+'</span><div><b>'+esc(e.n)+'</b></div><div class="small muted">'+esc(e.r)+'</div></a>'}}).join('')+'</div>':'<p class="muted">이날은 예정된 청약 일정이 없습니다.</p>'}}
+document.getElementById('prev').onclick=function(){{cur=new Date(cur.getFullYear(),cur.getMonth()-1,1);draw()}};
+document.getElementById('next').onclick=function(){{cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);draw()}};
+draw();day();
+</script>
+"""
+    return page(f"{TODAY.year}년 {TODAY.month}월 아파트 청약 달력 - 접수일·당첨 발표일 | {SITE_NAME}",
+                f"{TODAY.year}년 {TODAY.month}월 아파트 청약 일정을 달력으로 정리했습니다. 특별공급·1순위 접수일, 당첨자 발표일, 계약일을 날짜별로 확인하세요.",
+                body, "calendar.html")
+
+
+def build_ics(it):
+    """단지 일정 캘린더 파일 — 접수 시작·마감 하루 전 알림 포함."""
+    r = it["d"]; name = (r.get("HOUSE_NM") or "청약").replace(",", " ").replace(";", " ")
+    url = f"{SITE_URL}/apt/{it['slug']}.html"
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//cheongyakradar//KO", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"]
+    for i, (v, typ, lab) in enumerate(events(it)):
+        nxt = v + dt.timedelta(days=1)
+        lines += ["BEGIN:VEVENT", f"UID:{it['slug']}-{i}@cheongyakradar.com", f"DTSTAMP:{stamp}",
+                  f"DTSTART;VALUE=DATE:{v:%Y%m%d}", f"DTEND;VALUE=DATE:{nxt:%Y%m%d}",
+                  f"SUMMARY:[{lab}] {name}", f"DESCRIPTION:청약레이더 {url}", f"URL:{url}",
+                  "BEGIN:VALARM", "ACTION:DISPLAY", f"DESCRIPTION:내일 {lab} - {name}", "TRIGGER:-PT15H", "END:VALARM",
+                  "END:VEVENT"]
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(lines) + "\r\n"
+
+
 # ───────────────────────── 화면 ─────────────────────────
 
 CSS = """
@@ -228,9 +335,21 @@ tr:last-child td{border-bottom:0}
 .calc label{display:block;font-weight:500;margin:14px 0 6px}
 .calc select{width:100%;height:44px;border:1px solid #D1D6DB;border-radius:8px;padding:0 10px;font:inherit;background:#fff}
 .score{font-size:44px;font-weight:700;color:#1B64DA}
+.alert{background:#FFF0F0;color:#C4161C;border-radius:12px;padding:12px 16px;margin:0 0 18px;font-size:14px}.alert b{margin-right:8px}.alert a{color:#C4161C;font-weight:500}
+.cal-hd{display:flex;align-items:center;justify-content:center;gap:18px;margin:8px 0}.cal-hd b{font-size:18px}.cal-hd button{width:36px;height:36px;border:1px solid #D1D6DB;border-radius:18px;background:#fff;font-size:18px;cursor:pointer}
+.legend{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid #E5E8EB;border-left:1px solid #E5E8EB}
+.cw{padding:8px;text-align:center;font-size:13px;color:#6B7684;background:#F9FAFB;border-right:1px solid #E5E8EB;border-bottom:1px solid #E5E8EB}
+.cd{min-height:92px;padding:6px;border:0;border-right:1px solid #E5E8EB;border-bottom:1px solid #E5E8EB;background:#fff;text-align:left;font:inherit;display:flex;flex-direction:column;gap:3px;cursor:pointer;overflow:hidden}
+.cd.e{cursor:default}.cd .dn{font-size:13px;font-weight:500}.cd.today .dn{color:#fff;background:#1B64DA;border-radius:10px;padding:0 7px;align-self:flex-start}.cd.sel{background:#F2F8FF}
+.ev{display:inline-block;font-size:11px;line-height:1.5;padding:0 5px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ev-sp{background:#FFF3E0;color:#B35400}.ev-r1,.ev-r2{background:#E8F3FF;color:#1B64DA}.ev-win{background:#E9F8EE;color:#0B7A3E}.ev-ct{background:#F2F4F6;color:#4E5968}
+.more{font-size:11px;color:#6B7684}
+.btn{display:inline-block;padding:10px 16px;border-radius:8px;background:#1B64DA;color:#fff;font-weight:500}.btn:hover{text-decoration:none;background:#1957C2}
+@media(max-width:640px){.cd{min-height:64px;padding:4px}.cd .ev{font-size:0;width:8px;height:8px;padding:0;border-radius:4px}.cd .ev-sp{background:#F59E0B}.cd .ev-r1,.cd .ev-r2{background:#1B64DA}.cd .ev-win{background:#16A34A}.cd .ev-ct{background:#8B95A1}.more{display:none}}
 footer{border-top:1px solid #E5E8EB;background:#F9FAFB;font-size:12px;color:#6B7684;padding:24px 0}
 footer a{color:#4E5968;margin-right:16px}
-@media(max-width:640px){h1{font-size:23px}.kv{grid-template-columns:110px 1fr}.hd{height:auto;padding:12px 0;gap:12px}}
+@media(max-width:640px){h1{font-size:23px}.kv{grid-template-columns:110px 1fr}.hd{height:auto;padding:12px 20px;gap:12px}}
 """
 
 LOGO = ('<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11" fill="none" stroke="#1B64DA" stroke-width="2.2"/>'
@@ -271,7 +390,7 @@ def page(title, desc, body, path, extra_head=""):
 <body>
 <header><div class="wrap hd">
 <a class="logo" href="{up}index.html">{LOGO}{SITE_NAME}</a>
-<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}calc.html">가점 계산기</a><a href="{up}index.html#done">경쟁률</a><a href="{up}about.html">서비스 소개</a></nav>
+<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}calendar.html">청약 달력</a><a href="{up}calc.html">가점 계산기</a><a href="{up}index.html#done">경쟁률</a><a href="{up}about.html">서비스 소개</a></nav>
 </div></header>
 <div class="bar"><div class="wrap"><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</div></div>
 <main class="wrap">
@@ -327,12 +446,15 @@ def build_index(items):
     body = f"""
 <h1>이번 주 청약 일정과 분양가, 한 화면에서</h1>
 <p class="lead">청약홈 분양공고를 매일 아침 정리합니다. 지금 접수 중인 단지 {n_open}곳, 접수 예정·발표 대기 단지 {len(live) - n_open}곳이 있습니다. 평당 분양가는 주택형별 최고 공급가를 공급면적으로 나눠 계산했습니다.</p>
+{soon_bar(items, 'apt/')}
 <div class="pills" role="group" aria-label="지역 선택">{pills}</div>
 <h2 id="live" style="margin-top:8px">접수 중 · 예정 · 발표 대기</h2>
 {TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in live) or '<tr><td colspan="8">현재 진행 중인 공고가 없습니다.</td></tr>'}</tbody></table></div>
 {ad_slot()}
 <h2 id="done">최근 마감된 청약</h2>
 {TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in done)}</tbody></table></div>
+<h2>날짜별로 보고 싶다면</h2>
+<div class="card"><p style="margin:0 0 10px">특별공급·1순위 접수일과 당첨자 발표일을 달력 한 장에 모았습니다.</p><a href="calendar.html"><b>청약 달력 열기 →</b></a></div>
 <h2>내 점수로 당첨될 수 있을까?</h2>
 <div class="card"><p style="margin:0 0 10px">무주택 기간, 부양가족 수, 청약통장 가입 기간만 고르면 84점 만점 가점을 바로 계산합니다.</p><a href="calc.html"><b>청약 가점 계산기 열기 →</b></a></div>
 <script>
@@ -475,6 +597,7 @@ def build_detail(it, items):
 <h1>{esc(name)} 청약 일정·분양가 <span class="b b-{cls}" style="vertical-align:middle">{esc(lab)}</span></h1>
 <p class="lead">{esc(short_addr(r.get('HSSPLY_ADRES')))} · {esc(it['kind'])} · 공고일 {fmt_full(r.get('RCRIT_PBLANC_DE'))}</p>
 <h2>청약 일정</h2>{kv(sched)}
+{('<p style="margin:14px 0 0"><a class="btn" href="' + it['slug'] + '.ics" download>내 캘린더에 일정 추가</a> <span class="small muted">접수·발표 하루 전에 알림이 옵니다</span></p>') if events(it) else ''}
 <h2>단지 정보</h2>{kv(info)}
 <h2>주택형별 분양가</h2>{mtable}
 <h2>한눈에 보는 분석</h2><div class="note">{'<br>'.join(analysis) or '분석할 주택형 정보가 아직 없습니다.'}</div>
@@ -598,12 +721,15 @@ def main():
     (OUT / "assets" / "style.css").write_text(CSS.strip(), encoding="utf-8")
     (OUT / "index.html").write_text(build_index(items), encoding="utf-8")
     (OUT / "calc.html").write_text(build_calc(), encoding="utf-8")
+    (OUT / "calendar.html").write_text(build_calendar(items), encoding="utf-8")
     (OUT / "about.html").write_text(build_about(), encoding="utf-8")
     (OUT / "privacy.html").write_text(build_privacy(), encoding="utf-8")
-    urls = ["", "calc.html", "about.html"]
+    urls = ["", "calendar.html", "calc.html", "about.html"]
     for it in items:
         (OUT / "apt" / f"{it['slug']}.html").write_text(build_detail(it, items), encoding="utf-8")
         urls.append(f"apt/{it['slug']}.html")
+        if events(it):
+            (OUT / "apt" / f"{it['slug']}.ics").write_bytes(build_ics(it).encode("utf-8"))
     sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     sm += [f"<url><loc>{SITE_URL}/{u}</loc><lastmod>{TODAY.isoformat()}</lastmod></url>" for u in urls]
     sm.append("</urlset>")
