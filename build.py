@@ -494,49 +494,49 @@ def kv(rows):
     return '<div class="kv">' + "".join(f"<div>{esc(k)}</div><div>{v}</div>" for k, v in rows if v and v != "-") + "</div>"
 
 
-# 신축 입주 준비 쿠팡 파트너스 상품 (2026-10-11 선정: 커튼·공기·수납·가전·침구)
+# 신축 입주 준비 쿠팡 파트너스 상품 (2026-10-11 교체: 새집 입주자는 싼 것보다 좋은 것을 찾음 → 프리미엄 가전 위주)
 AFF = [
  {
-  "t": "쿠쿠 공기청정기 96.8㎡",
-  "u": "새집 냄새·미세먼지, 거실 넓이까지 커버",
-  "p": 281600,
-  "link": "https://link.coupang.com/a/hKIZHzBxUO",
-  "img": "https://t3c.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/3805/e3f354c4380040f44de9638ab15bdd199d45209987b3784ec62b96177bab.jpg"
+  "t": "로보락 S9 MaxV Ultra 직배수",
+  "u": "신축은 직배수 배관 연결이 쉬워 물통 비울 일 없어요",
+  "p": 1540000,
+  "link": "https://link.coupang.com/a/hLDEAhWru0",
+  "img": "https://thumbnail8.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/134385707333821-b03213d0-6147-48ef-a441-a09008cdbfa2.jpg"
  },
  {
-  "t": "드레스룸 시스템 행거",
-  "u": "빈 드레스룸·알파룸을 바로 옷장으로",
-  "p": 74900,
-  "link": "https://link.coupang.com/a/hKI0OwZK4y",
-  "img": "https://t1c.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/ba7a/ebe665bc1b2fe5439f9c3e7ff5b73256156ea0f012c397672fbd139686b4.png"
+  "t": "LG 퓨리케어 오브제 AI 360° 알파UP",
+  "u": "109㎡ 대형 거실까지, 새집 미세먼지·냄새 한 번에",
+  "p": 1850290,
+  "link": "https://link.coupang.com/a/hLDIa0KOIe",
+  "img": "https://t2c.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/6a32/d231403ff458513e5eaac082e01bb90ee7da9810199dfc45ff94a868eca3.jpg"
  },
  {
-  "t": "편백 피톤치드 스프레이",
-  "u": "새 가구·붙박이장 냄새 잡는 편백수",
-  "p": 9800,
-  "link": "https://link.coupang.com/a/hKIZ4qzWMu",
-  "img": "https://t2c.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/6362130807717-ec84de9a-8ec1-4b2d-839c-6bfe3a7c6c50.jpg"
+  "t": "다이슨 빅+콰이엇 포름알데히드",
+  "u": "새집증후군 원인 포름알데히드까지 분해",
+  "p": 719040,
+  "link": "https://link.coupang.com/a/hLDIorOf5o",
+  "img": "https://thumbnail15.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/2025/09/08/15/7/ae3e7ca9-9d93-482f-8322-b060650a8ad8.jpg"
  },
  {
-  "t": "물걸레 로봇청소기",
-  "u": "턱 없는 신축 바닥에서 특히 잘 다녀요",
-  "p": 127900,
-  "link": "https://link.coupang.com/a/hKI1cmm94C",
-  "img": "https://thumbnail12.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/5f31/005b73e6240a5805743489b06c0b2137ba667640182339b18779d5216705.jpg"
+  "t": "LG 스타일러 오브제컬렉션",
+  "u": "새 드레스룸에 들이는 의류관리기, 방문설치",
+  "p": 1204030,
+  "link": "https://link.coupang.com/a/hLDICeL3RI",
+  "img": "https://thumbnail2.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/2026/02/02/9/0/cfafe4f4-982a-4865-ae38-3340244b194e.jpg"
  },
  {
-  "t": "고체 탈취제",
-  "u": "신발장·드레스룸 새집 냄새 제거",
-  "p": 18860,
-  "link": "https://link.coupang.com/a/hKI0rju9rE",
-  "img": "https://thumbnail10.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/image_audit/prod/76575d16-660d-4f96-be06-0691ec1ad670_fixing_v2.png"
+  "t": "삼성 Bespoke 에어드레서",
+  "u": "빌트인처럼 붙는 디자인, 상의 5벌 동시 관리",
+  "p": 939550,
+  "link": "https://link.coupang.com/a/hLDIQIV8N2",
+  "img": "https://thumbnail15.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/2025/04/16/12/4/fdc81716-073f-4866-8ef0-e79ec5e2240e.jpg"
  },
  {
-  "t": "독립스프링 매트리스 25cm",
-  "u": "새 집 새 침대, 리뷰 1만5천 건대",
-  "p": 142800,
-  "link": "https://link.coupang.com/a/hKI1CEcDyS",
-  "img": "https://thumbnail10.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/c9e6/401a9ab59e77fda02a635b8e7461ac6461e85f005763f6a78f2aa2649b83.jpg"
+  "t": "삼성 Bespoke 제트 AI 400W",
+  "u": "자동 먼지비움 스테이션, 새 집 첫 청소기로",
+  "p": 1390000,
+  "link": "https://link.coupang.com/a/hLDI3IvJW8",
+  "img": "https://thumbnail9.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/2332178184722-2c42fbd6-c29f-41ad-97f1-f526d3f2d68d.jpg"
  }
 ]
 
@@ -548,7 +548,7 @@ def aff_html(slug):
     cards = "".join(
         f'<a class="card aff" href="{esc(a["link"])}" rel="sponsored nofollow noopener" target="_blank">'
         f'<img src="{esc(a["img"].replace("1000x1000ex", "230x230ex"))}" alt="{esc(a["t"])}" loading="lazy" width="72" height="72">'
-        f'<span><b>{esc(a["t"])}</b><span class="small muted">{esc(a["u"])}</span><span class="small">{a["p"]:,}원~ · 쿠팡에서 보기</span></span></a>'
+        f'<span><b>{esc(a["t"])}</b><span class="small muted">{esc(a["u"])}</span><span class="small">{a["p"]//10000:,}만원대 · 쿠팡에서 보기</span></span></a>'
         for a in picks)
     return (f'<div class="grid">{cards}</div>'
             '<p class="small muted" style="margin-top:8px">이 게시물은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. 가격은 변동될 수 있습니다.</p>')
