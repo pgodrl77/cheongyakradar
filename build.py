@@ -219,6 +219,7 @@ tr:last-child td{border-bottom:0}
 .card{border:1px solid #E5E8EB;border-radius:12px;padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 .ad{margin:28px 0;min-height:90px}
+.aff{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:14px}.aff:hover{border-color:#1B64DA}.aff img{border-radius:8px;flex:none;object-fit:cover}.aff>span{display:flex;flex-direction:column;gap:2px}
 .tag{font-size:12px;color:#8B95A1;border:1px solid #D1D6DB;border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:middle}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:0;border:1px solid #E5E8EB;border-radius:12px;overflow:hidden}
 .kv div{padding:11px 16px;border-bottom:1px solid #F2F4F6}
@@ -347,6 +348,79 @@ def kv(rows):
     return '<div class="kv">' + "".join(f"<div>{esc(k)}</div><div>{v}</div>" for k, v in rows if v and v != "-") + "</div>"
 
 
+# 입주 준비 쿠팡 파트너스 상품 (살림템 링크 접수대에서 선별)
+AFF = [
+ {
+  "t": "유리 스크래퍼 세트",
+  "u": "새 집 창문·바닥에 남은 시공 자국 제거",
+  "p": 7420,
+  "link": "https://link.coupang.com/a/hoS1oDX47o",
+  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/retail/images/e44d87b0-dce4-4d55-9612-1b7946b2df818693464835250625854.png"
+ },
+ {
+  "t": "스티커 자국 제거제",
+  "u": "가구·창호 보호필름 끈적임 정리",
+  "p": 9200,
+  "link": "https://link.coupang.com/a/hoS1keCmRg",
+  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/retail/images/2879984691297-0d1a4a7b-88b8-4db1-bde5-f8169d75ebec.png"
+ },
+ {
+  "t": "실리콘 곰팡이 제거젤",
+  "u": "욕실 실리콘 줄눈 입주 전 청소",
+  "p": 13290,
+  "link": "https://link.coupang.com/a/hoSVe0E0gS",
+  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/vendor_inventory/images/1d1df21b-ffc5-4283-b3b5-fd5d2060388014191024103911303603.png"
+ },
+ {
+  "t": "타일 줄눈 마커펜",
+  "u": "누렇게 뜬 줄눈을 셀프로 하얗게",
+  "p": 16000,
+  "link": "https://link.coupang.com/a/hoSV92N2Xc",
+  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/vendor_inventory/9b7e/c9c6fe1e29816a06be7ac96fda68595b41f217ce05cb6f51f9334a09e40c.png"
+ },
+ {
+  "t": "무타공 욕실 선반",
+  "u": "벽에 구멍 없이 욕실 수납 추가",
+  "p": 79600,
+  "link": "https://link.coupang.com/a/hoSWA3UHhk",
+  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/vendor_inventory/7eae/760e729b0906b6cc39f1bc50de0d979e8ff2bc5922dc0e50acfcdd9de8b0.png"
+ },
+ {
+  "t": "싱크대 하부장 슬라이딩 선반",
+  "u": "하부장 안쪽까지 꺼내 쓰는 수납",
+  "p": 43600,
+  "link": "https://link.coupang.com/a/hoSYwiRj1E",
+  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/retail/images/7945764113971-9df16e92-a8e1-40c4-92ea-7cd2d55ec5d6.jpg"
+ },
+ {
+  "t": "충전식 센서등",
+  "u": "현관·드레스룸에 배선 없이 설치",
+  "p": 13000,
+  "link": "https://link.coupang.com/a/hoS0Y5StWK",
+  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/vendor_inventory/abbf/80a9ae24042128b15c791e15f8a896901dc668180d34cc13b23c484f10e6.jpeg"
+ },
+ {
+  "t": "결로 방지 테이프",
+  "u": "첫 겨울 창틀 결로·곰팡이 예방",
+  "p": 13400,
+  "link": "https://link.coupang.com/a/hoSYS9dUFo",
+  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/retail/images/2024/09/24/13/3/02941928-2aeb-4963-ba1f-d52109ce08e9.png"
+ }
+]
+
+def aff_html(slug):
+    import hashlib
+    k = int(hashlib.md5(slug.encode()).hexdigest(), 16)
+    n = len(AFF); start = k % n
+    picks = [AFF[(start + i) % n] for i in range(4)]
+    cards = "".join(
+        f'<a class="card aff" href="{esc(a["link"])}" rel="sponsored nofollow noopener" target="_blank">'
+        f'<img src="{esc(a["img"].replace("1000x1000ex", "230x230ex"))}" alt="{esc(a["t"])}" loading="lazy" width="72" height="72">'
+        f'<span><b>{esc(a["t"])}</b><span class="small muted">{esc(a["u"])}</span><span class="small">{a["p"]:,}원~ · 쿠팡에서 보기</span></span></a>'
+        for a in picks)
+    return (f'<div class="grid">{cards}</div>'
+            '<p class="small muted" style="margin-top:8px">이 게시물은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. 가격은 변동될 수 있습니다.</p>')
+
 def build_detail(it, items):
     r = it["d"]
     name = r.get("HOUSE_NM") or "단지"
@@ -398,7 +472,7 @@ def build_detail(it, items):
         if total_g + total_s:
             analysis.append(f"전체 {total_g + total_s:,}세대 중 특별공급이 {total_s:,}세대({total_s / (total_g + total_s) * 100:.0f}%), 일반공급이 {total_g:,}세대입니다.")
         small = [m for m in it["mdl"] if _ty(m) and _ty(m) <= 85]
-        if small and (r.get("HOUSE_DTL_SECD_NM") or "") == "민영":
+        if small:
             analysis.append(f"전용 85㎡ 이하 주택형이 {len(small)}개 있습니다. 85㎡ 이하 민영주택은 가점제 비율이 높아 청약 가점이 중요합니다.")
     ctable = build_cmpet(it["cmp"])
     near = [x for x in items if x["region"] == it["region"] and x is not it][:6]
@@ -422,9 +496,7 @@ def build_detail(it, items):
 {('<h2>청약 경쟁률</h2>' + ctable) if ctable else ''}
 <h2>원문 확인</h2><p>{' · '.join(links) or '청약홈(applyhome.co.kr)에서 단지명으로 검색해 공고 원문을 확인하세요.'}</p>
 <h2>입주 준비<span class="tag">광고·제휴</span></h2>
-<div class="grid"><div class="card"><b>이사 견적 비교</b><p class="small muted" style="margin:4px 0 0">입주일에 맞춰 업체 견적을 비교하세요.</p></div>
-<div class="card"><b>입주청소</b><p class="small muted" style="margin:4px 0 0">사전 점검 후 입주 전 청소 일정을 잡으세요.</p></div>
-<div class="card"><b>가전 렌탈 상담</b><p class="small muted" style="margin:4px 0 0">정수기·공기청정기 렌탈 조건을 비교해 드립니다.</p></div></div>
+{aff_html(it['slug'])}
 {('<h2>' + esc(it['region']) + ' 다른 청약</h2><div class="grid">' + near_html + '</div>') if near_html else ''}
 """
     desc = f"{name} 청약 일정(특별공급·1순위·당첨자 발표), 주택형별 분양가와 평당가, 경쟁률을 정리했습니다."
