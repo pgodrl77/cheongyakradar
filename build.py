@@ -50,6 +50,7 @@ def load_key():
 
 
 KEY = None
+LH_N = 0
 
 
 def call(path, params):
@@ -492,7 +493,7 @@ def build_index(items):
 {ad_slot()}
 <h2 id="done">최근 마감된 청약</h2>
 {TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in done)}</tbody></table></div>
-<div class="grid" style="margin-top:24px"><a class="card" href="week.html"><b style="display:block;margin-bottom:6px">이번 주 청약 일정 →</b><span class="small muted">요일별 특별공급·1순위·당첨 발표</span></a><a class="card" href="jupjup.html"><b style="display:block;margin-bottom:6px">무순위 줍줍 일정 →</b><span class="small muted">잔여세대·임의공급만 모아 보기</span></a></div>
+<div class="grid" style="margin-top:24px"><a class="card" href="week.html"><b style="display:block;margin-bottom:6px">이번 주 청약 일정 →</b><span class="small muted">요일별 특별공급·1순위·당첨 발표</span></a><a class="card" href="jupjup.html"><b style="display:block;margin-bottom:6px">무순위 줍줍 일정 →</b><span class="small muted">잔여세대·임의공급만 모아 보기</span></a>{'<a class="card" href="public.html"><b style="display:block;margin-bottom:6px">LH 공공분양·임대 →</b><span class="small muted">행복주택·국민임대 공고 모음</span></a>' if LH_N else ''}</div>
 <h2>날짜별로 보고 싶다면</h2>
 <div class="card"><p style="margin:0 0 10px">특별공급·1순위 접수일과 당첨자 발표일을 달력 한 장에 모았습니다.</p><a href="calendar.html"><b>청약 달력 열기 →</b></a></div>
 <h2>내 점수로 당첨될 수 있을까?</h2>
@@ -614,6 +615,8 @@ def build_detail(it, items):
         analysis.append(f"이 단지의 평균 평당 분양가(최고가 기준)는 <b>{it['ppp']:,}만원</b>으로, 최근 {LOOKBACK_DAYS}일 동안 {esc(it['region'])}에서 공고된 아파트 평균({it['region_avg']:,}만원)보다 <b>{abs(diff):.1f}% {word}</b>.")
     elif it.get("ppp"):
         analysis.append(f"이 단지의 평균 평당 분양가(최고가 기준)는 <b>{it['ppp']:,}만원</b>입니다. 같은 지역 비교 대상이 부족해 지역 평균 비교는 생략했습니다.")
+    if it.get("gap"):
+        analysis.append("주변 시세와 비교하면 " + it["gap"] + ". 실거래 중앙값은 층·동·연식이 섞인 값이라 참고용입니다.")
     if it["mdl"]:
         total_g = sum(int(m.get("SUPLY_HSHLDCO") or 0) for m in it["mdl"])
         total_s = sum(int(m.get("SPSPLY_HSHLDCO") or 0) for m in it["mdl"])
@@ -841,6 +844,9 @@ def detail_faq(it):
         if cs.get("top_rate"):
             a += f" 가장 경쟁이 높았던 주택형은 {cs['top_ty']}로 {cs['top_rate']:g} 대 1입니다."
         qas.append((f"{name} 경쟁률은 얼마인가요?", a))
+    if it.get("gap_v") is not None:
+        import re as _re
+        qas.append((f"{name} 안전마진(시세 차익)은 얼마인가요?", _re.sub("<[^>]+>", "", it["gap"]) + ". 실제 시세 차익은 입주 시점 시세와 옵션·발코니 비용에 따라 달라집니다."))
     ss = score_summary(it)
     if ss:
         qas.append((f"{name} 당첨 가점 커트라인은 몇 점인가요?", f"가점제 당첨자 최저 점수는 {ss['min']}점({ss['min_ty']} {ss['min_res']})이고, 최고 점수는 {ss['max']}점입니다. 내 점수는 청약콕 가점 계산기로 바로 확인할 수 있습니다."))
@@ -890,6 +896,35 @@ def build_jupjup(items):
     fb, ld = faq_block(qas)
     return page(f"무순위 청약(줍줍) 일정 {TODAY:%Y년 %m월} — 잔여세대·임의공급 모음 | {SITE_NAME}",
                 "이번 주 무순위 청약(줍줍)·잔여세대·임의공급 공고 일정과 경쟁률, 2025년 개편된 신청 자격을 매일 정리합니다.", body + fb, "jupjup.html", ld)
+
+
+# ───────────────────────── LH 공공분양·임대 공고 ─────────────────────────
+
+def build_public(rows):
+    def g(x, *ks):
+        for k in ks:
+            if x.get(k):
+                return str(x[k])
+        return ""
+    def dd(v):
+        v = v.replace(".", "").replace("-", "")[:8]
+        return f"{v[4:6]}.{v[6:8]}" if len(v) == 8 and v.isdigit() else "-"
+    open_rows = [x for x in rows if "마감" not in g(x, "PAN_SS")]
+    trs = "".join(
+        f'<tr><td><a href="{esc(g(x, "DTL_URL"))}" rel="nofollow noopener" target="_blank"><b>{esc(g(x, "PAN_NM"))}</b></a>'
+        f'<div class="small muted">{esc(g(x, "UPP_AIS_TP_NM", "AIS_TP_CD_NM"))} {esc(g(x, "AIS_TP_CD_NM") if g(x, "UPP_AIS_TP_NM") else "")}</div></td>'
+        f'<td>{esc(g(x, "CNP_CD_NM") or "-")}</td><td>{dd(g(x, "PAN_NT_ST_DT", "PAN_DT"))}</td><td>{dd(g(x, "CLSG_DT"))}</td><td><span class="b b-wait">{esc(g(x, "PAN_SS") or "-")}</span></td></tr>'
+        for x in open_rows[:150])
+    body = f"""
+<p class="small muted"><a href="index.html">청약 일정</a> › LH 공공분양·임대</p>
+<h1>LH 공공분양·임대 공고 모음 — 청약홈에 없는 공고까지</h1>
+<p class="lead">행복주택·국민임대·공공분양 등 LH(한국토지주택공사) 청약센터 공고 {len(open_rows)}건을 모았습니다. 공고명을 누르면 LH 청약플러스 원문으로 이동합니다.</p>
+<p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 매일 아침 갱신 · 서울 SH 공고는 <a href="https://www.i-sh.co.kr" rel="nofollow noopener" target="_blank">SH 인터넷청약</a>, 경기 GH 공고는 <a href="https://apply.gh.or.kr" rel="nofollow noopener" target="_blank">GH 청약센터</a>에서 확인하세요.</p>
+<div class="tbl"><table><thead><tr><th>공고명</th><th>지역</th><th>공고일</th><th>마감</th><th>상태</th></tr></thead><tbody>{trs or '<tr><td colspan="5">진행 중인 공고가 없습니다.</td></tr>'}</tbody></table></div>
+{ad_slot()}
+"""
+    return page(f"LH 공공분양·임대 공고 {TODAY:%Y년 %m월} — 행복주택·국민임대 모음 | {SITE_NAME}",
+                "LH 행복주택·국민임대·공공분양 공고를 매일 모아 공고일·마감일과 함께 정리합니다.", body, "public.html")
 
 
 # ───────────────────────── 이번 주 청약 일정 ─────────────────────────
@@ -1075,6 +1110,13 @@ def main():
     global KEY
     KEY = load_key()
     items = enrich(collect())
+    import market, lhpub
+    for it in items:
+        if it["status"][0] != "done" or (it.get("first") and (TODAY - it["first"]).days <= 90):
+            market.gap(it, KEY, TODAY, _ty)
+    lh_rows = lhpub.fetch(KEY)
+    global LH_N
+    LH_N = len(lh_rows)
     (OUT / "apt").mkdir(parents=True, exist_ok=True)
     (OUT / "assets").mkdir(parents=True, exist_ok=True)
     (OUT / "assets" / "style.css").write_text(CSS.strip(), encoding="utf-8")
@@ -1090,7 +1132,11 @@ def main():
     (OUT / "move.html").write_text(moveday.build(TODAY, page, esc, ad_slot, SITE_NAME, aff_html), encoding="utf-8")
     (OUT / "week.html").write_text(build_week(items), encoding="utf-8")
     (OUT / "jupjup.html").write_text(build_jupjup(items), encoding="utf-8")
-    urls = ["", "week.html", "jupjup.html", "calendar.html", "calc.html", "move.html", "about.html", "contact.html"]
+    extra = []
+    if lh_rows:
+        (OUT / "public.html").write_text(build_public(lh_rows), encoding="utf-8")
+        extra.append("public.html")
+    urls = extra + ["", "week.html", "jupjup.html", "calendar.html", "calc.html", "move.html", "about.html", "contact.html"]
     for path, htmltxt in build_guides():
         (OUT / path).write_text(htmltxt, encoding="utf-8")
         urls.append(path)
