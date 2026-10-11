@@ -1068,7 +1068,7 @@ def build_guides():
     for g in guides.GUIDES:
         others = "".join(f'<li><a href="{o["slug"]}.html">{esc(o["short"])}</a></li>' for o in guides.GUIDES if o is not g)
         ex = guides.EXTRA.get(g["slug"], {})
-        extra_aff = ('<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>' + aff_html("guide-" + g["slug"], 2)) if g["slug"] == "dongho" else ""
+        extra_aff = ('<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>' + aff_html("guide-" + g["slug"])) if g["slug"] == "dongho" else ""
         glance = ("<h2>한눈에 보기</h2>" + kv([(k, esc(v)) for k, v in ex["glance"]])) if ex.get("glance") else ""
         fb, ld = faq_block([(q, esc(a)) for q, a in ex.get("faq", [])])
         body = (f'<p class="small muted"><a href="../index.html">청약 일정</a> › <a href="index.html">청약 가이드</a></p><h1>{esc(g["title"])}</h1>'

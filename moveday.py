@@ -59,7 +59,7 @@ def build(today, page, esc, ad_slot, site_name, aff_html=None, cpa_html=None):
 </ul>
 <p class="small muted">손 없는 날은 민속 풍습이며, 음력 날짜는 한국천문연구원 음양력 기준으로 계산했습니다.</p>
 <h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>
-{aff_html('moveday', 2) if aff_html else ''}
+{aff_html('moveday') if aff_html else ''}
 """
     title = f"손 없는 날 {yr} 이사 길일 달력 — 월별 날짜·음력 | {site_name}"
     desc = f"{yr}년 손 없는 날(이사 길일)을 월별로 정리했습니다. 음력 9·10·19·20·29·30일, 주말 여부와 입주 날짜 잡을 때 확인할 점."
