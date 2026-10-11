@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""청약레이더 정적 사이트 생성기.
+"""청약콕 정적 사이트 생성기.
 
 한국부동산원 청약홈 오픈API(공공데이터포털)에서 분양공고·주택형·경쟁률을 받아
 site/ 폴더에 정적 HTML 을 만든다. 표준 라이브러리만 사용.
@@ -17,8 +17,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 ROOT = pathlib.Path(__file__).resolve().parent
 OUT = ROOT / "site"
-SITE_URL = os.environ.get("SITE_URL", "https://cheongyakradar.com")
-SITE_NAME = "청약레이더"
+SITE_URL = os.environ.get("SITE_URL", "https://cheongyakkok.com")
+SITE_NAME = "청약콕"
 API = "https://api.odcloud.kr/api"
 KST = dt.timezone(dt.timedelta(hours=9))
 TODAY = dt.datetime.now(KST).date()
@@ -282,12 +282,12 @@ def build_ics(it):
     r = it["d"]; name = (r.get("HOUSE_NM") or "청약").replace(",", " ").replace(";", " ")
     url = f"{SITE_URL}/apt/{it['slug']}.html"
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//cheongyakradar//KO", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"]
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//cheongyakkok//KO", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"]
     for i, (v, typ, lab) in enumerate(events(it)):
         nxt = v + dt.timedelta(days=1)
-        lines += ["BEGIN:VEVENT", f"UID:{it['slug']}-{i}@cheongyakradar.com", f"DTSTAMP:{stamp}",
+        lines += ["BEGIN:VEVENT", f"UID:{it['slug']}-{i}@cheongyakkok.com", f"DTSTAMP:{stamp}",
                   f"DTSTART;VALUE=DATE:{v:%Y%m%d}", f"DTEND;VALUE=DATE:{nxt:%Y%m%d}",
-                  f"SUMMARY:[{lab}] {name}", f"DESCRIPTION:청약레이더 {url}", f"URL:{url}",
+                  f"SUMMARY:[{lab}] {name}", f"DESCRIPTION:청약콕 {url}", f"URL:{url}",
                   "BEGIN:VALARM", "ACTION:DISPLAY", f"DESCRIPTION:내일 {lab} - {name}", "TRIGGER:-PT15H", "END:VALARM",
                   "END:VEVENT"]
     lines.append("END:VCALENDAR")
@@ -737,8 +737,8 @@ def build_privacy():
 
 
 MANIFEST = {
-    "name": "청약레이더 - 아파트 청약 일정·분양가",
-    "short_name": "청약레이더",
+    "name": "청약콕 - 아파트 청약 일정·분양가",
+    "short_name": "청약콕",
     "description": "아파트 청약 일정, 분양가, 경쟁률, 청약 달력을 매일 정리합니다.",
     "lang": "ko",
     "start_url": "/?source=pwa",

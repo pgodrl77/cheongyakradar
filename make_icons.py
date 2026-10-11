@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""청약레이더 앱 아이콘 생성 (static/ 에 저장). 한 번만 실행하면 됨."""
+"""청약콕 앱 아이콘 생성 (static/ 에 저장). 한 번만 실행하면 됨."""
 import pathlib
 from PIL import Image, ImageDraw
 
