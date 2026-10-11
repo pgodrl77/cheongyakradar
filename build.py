@@ -362,7 +362,8 @@ LOGO = ('<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><cir
         '<circle cx="13" cy="13" r="5.5" fill="none" stroke="#1B64DA" stroke-width="2.2"/><path d="M13 13 L21 6" stroke="#1B64DA" stroke-width="2.2" stroke-linecap="round"/>'
         '<circle cx="19" cy="9" r="2" fill="#1B64DA"/></svg>')
 
-ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "")  # 승인 후 ca-pub-… 입력
+ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "ca-pub-4989700606813042")  # 애드센스 게시자 ID (심사용 코드도 이것으로 들어감)
+CONTACT_EMAIL = "hello@sehucalc.com"
 
 
 def ad_slot():
@@ -403,7 +404,7 @@ def page(title, desc, body, path, extra_head=""):
 <body>
 <header><div class="wrap hd">
 <a class="logo" href="{up}index.html">{LOGO}{SITE_NAME}</a>
-<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}calendar.html">청약 달력</a><a href="{up}calc.html">가점 계산기</a><a href="{up}index.html#done">경쟁률</a><a href="{up}about.html">서비스 소개</a></nav>
+<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}calendar.html">청약 달력</a><a href="{up}calc.html">가점 계산기</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}about.html">서비스 소개</a></nav>
 </div></header>
 <div class="bar"><div class="wrap barin"><span><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</span><button type="button" id="inst" class="inst" hidden>홈 화면에 앱 설치</button></div></div>
 <div id="ios" class="ios" hidden><div class="wrap">아이폰은 Safari 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 쓸 수 있어요. <button type="button" id="iosx" aria-label="닫기">닫기</button></div></div>
@@ -411,7 +412,7 @@ def page(title, desc, body, path, extra_head=""):
 {body}
 </main>
 <footer><div class="wrap">
-<div><a href="{up}about.html">서비스 소개</a><a href="{up}privacy.html">개인정보처리방침</a><a href="{up}calc.html">청약 가점 계산기</a></div>
+<div><a href="{up}about.html">서비스 소개</a><a href="{up}contact.html">문의</a><a href="{up}privacy.html">개인정보처리방침</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}calc.html">청약 가점 계산기</a></div>
 <p>데이터 출처: 한국부동산원 청약홈 분양정보(공공데이터포털 오픈API). 정보는 자동으로 정리되며 오류가 있을 수 있습니다. 청약 전 반드시 청약홈의 입주자모집공고 원문을 확인하세요.</p>
 <p>일부 링크는 제휴 링크이며, 이를 통해 일정 수수료를 받을 수 있습니다.</p>
 <p>© {TODAY.year} {SITE_NAME}</p>
@@ -721,10 +722,43 @@ document.getElementById('d').textContent='무주택 '+a+'점 + 부양가족 '+b+
 
 def build_about():
     body = f"""<h1>{SITE_NAME} 서비스 소개</h1>
-<p>{SITE_NAME}는 한국부동산원 청약홈이 공공데이터포털에 공개하는 분양정보를 매일 받아, 단지별 청약 일정과 주택형별 분양가·평당가, 경쟁률을 보기 쉽게 정리하는 사이트입니다.</p>
-<p>평당 분양가는 주택형별 최고 공급금액을 공급면적(3.3㎡ 기준)으로 나눈 값의 평균이며, 같은 시·도에서 최근 {LOOKBACK_DAYS}일 동안 공고된 아파트 평균과 비교합니다. 자동으로 정리된 정보이므로 실제 청약 전에는 반드시 청약홈의 입주자모집공고 원문을 확인하세요.</p>
-<p>문의: hello@sehucalc.com</p>"""
-    return page(f"서비스 소개 | {SITE_NAME}", f"{SITE_NAME} 서비스 소개와 데이터 출처", body, "about.html")
+<p class="lead">{SITE_NAME}은 아파트 청약을 준비하는 사람이 공고문 수십 장을 뒤지지 않아도, 지금 넣을 수 있는 단지와 일정·분양가를 한 화면에서 비교할 수 있게 만든 사이트입니다.</p>
+<h2>무엇을 정리하나요</h2>
+<ul>
+<li><b>청약 일정:</b> 특별공급·1순위·2순위 접수일, 당첨자 발표일, 계약일을 단지별로 모으고 <a href="calendar.html">청약 달력</a>으로 보여 줍니다.</li>
+<li><b>분양가 비교:</b> 주택형별 최고 공급금액을 공급면적(3.3㎡)으로 나눠 평당가를 계산하고, 같은 시·도에서 최근 {LOOKBACK_DAYS}일 동안 나온 아파트 평균과 비교합니다.</li>
+<li><b>경쟁률:</b> 접수가 끝난 단지는 주택형별 경쟁률을 함께 보여 줍니다.</li>
+<li><b>가점 계산과 가이드:</b> <a href="calc.html">청약 가점 계산기</a>와 <a href="guide/index.html">청약 가이드</a>에서 1순위 조건, 무순위 자격, 가점 계산법을 설명합니다.</li>
+</ul>
+<h2>데이터 출처와 갱신</h2>
+<p>한국부동산원 청약홈이 공공데이터포털에 공개하는 분양정보 오픈API를 매일 아침 받아 자동으로 갱신합니다. 자동으로 정리한 정보라 공고 정정이나 입력 오류가 그대로 반영될 수 있으니, 실제 청약 전에는 반드시 청약홈의 입주자모집공고 원문을 확인하세요.</p>
+<h2>운영 원칙</h2>
+<p>특정 단지나 분양 대행사로부터 돈을 받고 순서를 바꾸거나 정보를 빼지 않습니다. 페이지의 광고와 제휴 상품은 "광고·제휴"로 따로 표시합니다.</p>
+<p>문의와 오류 제보는 <a href="contact.html">문의 페이지</a>를 이용해 주세요.</p>"""
+    return page(f"서비스 소개 | {SITE_NAME}", f"{SITE_NAME} 서비스 소개, 데이터 출처와 갱신 방식", body, "about.html")
+
+
+def build_contact():
+    body = f"""<h1>문의</h1>
+<p class="lead">정보 오류 제보, 제휴·광고 문의, 기타 의견은 아래 메일로 보내 주세요. 영업일 기준 2~3일 안에 답변드립니다.</p>
+<div class="kv"><div>이메일</div><div><a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a></div><div>운영</div><div>{SITE_NAME}</div></div>
+<p style="margin-top:16px">단지 정보 오류를 알려 주실 때는 단지명과 잘못된 항목을 함께 적어 주시면 빠르게 확인할 수 있습니다. 개별 청약 자격 판정이나 당첨 가능성 상담은 해 드리기 어려우며, 청약홈 고객센터(1644-7445)를 이용해 주세요.</p>"""
+    return page(f"문의 | {SITE_NAME}", f"{SITE_NAME} 문의·오류 제보", body, "contact.html")
+
+
+def build_guides():
+    import guides
+    out = []
+    links = "".join(f'<a class="card" href="{g["slug"]}.html"><b>{esc(g["short"])}</b><span class="small muted">{esc(g["desc"])}</span></a>' for g in guides.GUIDES)
+    idx = f"""<h1>청약 가이드</h1>
+<p class="lead">청약 전에 헷갈리기 쉬운 자격·순위·가점 규칙을 정리했습니다. 기준일을 함께 적어 두었으니 신청 전에는 공고문 원문도 꼭 확인하세요.</p>
+<div class="grid">{links}</div>"""
+    out.append(("guide/index.html", page(f"청약 가이드 - 1순위 조건·무순위 자격·가점 계산 | {SITE_NAME}", "아파트 청약 1순위 조건, 무순위(줍줍) 자격, 가점 계산 방법을 정리한 청약 가이드", idx, "guide/index.html")))
+    for g in guides.GUIDES:
+        others = "".join(f'<li><a href="{o["slug"]}.html">{esc(o["short"])}</a></li>' for o in guides.GUIDES if o is not g)
+        body = f'<p class="small muted"><a href="../index.html">청약 일정</a> › <a href="index.html">청약 가이드</a></p><h1>{esc(g["title"])}</h1>{g["body"]}{guides.SRC}{ad_slot()}<h2>다른 가이드</h2><ul>{others}</ul>'
+        out.append((f"guide/{g['slug']}.html", page(f"{g['title']} | {SITE_NAME}", g["desc"], body, f"guide/{g['slug']}.html")))
+    return out
 
 
 def build_privacy():
@@ -732,7 +766,8 @@ def build_privacy():
 <p>{SITE_NAME}는 회원가입이 없으며 이름·연락처 등 개인정보를 수집하지 않습니다. 청약 가점 계산기에 입력한 값은 브라우저 안에서만 계산되고 서버로 전송되지 않습니다.</p>
 <p>이 사이트는 Google 애드센스 광고를 게재할 수 있으며, Google 등 제3자 광고 사업자는 쿠키를 사용해 이용자의 이전 방문 기록을 바탕으로 광고를 표시할 수 있습니다. 이용자는 Google 광고 설정에서 맞춤 광고를 끌 수 있습니다.</p>
 <p>일부 링크는 제휴 링크이며, 이를 통해 구매·상담이 이루어지면 일정 수수료를 받을 수 있습니다.</p>
-<p>시행일: {TODAY:%Y년 %m월 %d일}</p>"""
+<p>개인정보 관련 문의: {CONTACT_EMAIL}</p>
+<p>시행일: 2026년 10월 10일</p>"""
     return page(f"개인정보처리방침 | {SITE_NAME}", "개인정보처리방침", body, "privacy.html")
 
 
@@ -791,7 +826,13 @@ def main():
     (OUT / "calendar.html").write_text(build_calendar(items), encoding="utf-8")
     (OUT / "about.html").write_text(build_about(), encoding="utf-8")
     (OUT / "privacy.html").write_text(build_privacy(), encoding="utf-8")
-    urls = ["", "calendar.html", "calc.html", "about.html"]
+    (OUT / "contact.html").write_text(build_contact(), encoding="utf-8")
+    (OUT / "ads.txt").write_text(f"google.com, {ADSENSE_CLIENT.replace('ca-', '')}, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
+    (OUT / "guide").mkdir(parents=True, exist_ok=True)
+    urls = ["", "calendar.html", "calc.html", "about.html", "contact.html"]
+    for path, htmltxt in build_guides():
+        (OUT / path).write_text(htmltxt, encoding="utf-8")
+        urls.append(path)
     for it in items:
         (OUT / "apt" / f"{it['slug']}.html").write_text(build_detail(it, items), encoding="utf-8")
         urls.append(f"apt/{it['slug']}.html")
