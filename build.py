@@ -348,63 +348,63 @@ def kv(rows):
     return '<div class="kv">' + "".join(f"<div>{esc(k)}</div><div>{v}</div>" for k, v in rows if v and v != "-") + "</div>"
 
 
-# 입주 준비 쿠팡 파트너스 상품 (살림템 링크 접수대에서 선별)
+# 신축 입주 준비 쿠팡 파트너스 상품 (2026-10-11 선정: 커튼·공기·수납·가전·침구)
 AFF = [
  {
-  "t": "유리 스크래퍼 세트",
-  "u": "새 집 창문·바닥에 남은 시공 자국 제거",
-  "p": 7420,
-  "link": "https://link.coupang.com/a/hoS1oDX47o",
-  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/retail/images/e44d87b0-dce4-4d55-9612-1b7946b2df818693464835250625854.png"
+  "t": "단열 암막커튼",
+  "u": "신축은 커튼이 없어요 — 입주 첫날부터 필요",
+  "p": 9990,
+  "link": "https://link.coupang.com/a/hKIYVtjOW4",
+  "img": "https://thumbnail14.coupangcdn.com/thumbnails/remote/212x212ex/image/1025_amir_coupang_oct_80k/195f/43a5558dafeb9062d8f3d76b1e44d911ead3d7809603c2e12d7f6b424d29.jpg"
  },
  {
-  "t": "스티커 자국 제거제",
-  "u": "가구·창호 보호필름 끈적임 정리",
-  "p": 9200,
-  "link": "https://link.coupang.com/a/hoS1keCmRg",
-  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/retail/images/2879984691297-0d1a4a7b-88b8-4db1-bde5-f8169d75ebec.png"
+  "t": "쿠쿠 공기청정기 96.8㎡",
+  "u": "새집 냄새·미세먼지, 거실 넓이까지 커버",
+  "p": 281600,
+  "link": "https://link.coupang.com/a/hKIZHzBxUO",
+  "img": "https://t3c.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/3805/e3f354c4380040f44de9638ab15bdd199d45209987b3784ec62b96177bab.jpg"
  },
  {
-  "t": "실리콘 곰팡이 제거젤",
-  "u": "욕실 실리콘 줄눈 입주 전 청소",
-  "p": 13290,
-  "link": "https://link.coupang.com/a/hoSVe0E0gS",
-  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/vendor_inventory/images/1d1df21b-ffc5-4283-b3b5-fd5d2060388014191024103911303603.png"
+  "t": "드레스룸 시스템 행거",
+  "u": "빈 드레스룸·알파룸을 바로 옷장으로",
+  "p": 74900,
+  "link": "https://link.coupang.com/a/hKI0OwZK4y",
+  "img": "https://t1c.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/ba7a/ebe665bc1b2fe5439f9c3e7ff5b73256156ea0f012c397672fbd139686b4.png"
  },
  {
-  "t": "타일 줄눈 마커펜",
-  "u": "누렇게 뜬 줄눈을 셀프로 하얗게",
-  "p": 16000,
-  "link": "https://link.coupang.com/a/hoSV92N2Xc",
-  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/vendor_inventory/9b7e/c9c6fe1e29816a06be7ac96fda68595b41f217ce05cb6f51f9334a09e40c.png"
+  "t": "편백 피톤치드 스프레이",
+  "u": "새 가구·붙박이장 냄새 잡는 편백수",
+  "p": 9800,
+  "link": "https://link.coupang.com/a/hKIZ4qzWMu",
+  "img": "https://t2c.coupangcdn.com/thumbnails/remote/212x212ex/image/retail/images/6362130807717-ec84de9a-8ec1-4b2d-839c-6bfe3a7c6c50.jpg"
  },
  {
-  "t": "무타공 욕실 선반",
-  "u": "벽에 구멍 없이 욕실 수납 추가",
-  "p": 79600,
-  "link": "https://link.coupang.com/a/hoSWA3UHhk",
-  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/vendor_inventory/7eae/760e729b0906b6cc39f1bc50de0d979e8ff2bc5922dc0e50acfcdd9de8b0.png"
+  "t": "오동나무 우드블라인드",
+  "u": "창 크기 맞춤제작, 방마다 깔끔하게",
+  "p": 35100,
+  "link": "https://link.coupang.com/a/hKIZkIknsG",
+  "img": "https://thumbnail5.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/bd60/706175e044d3e0d70d5b28fc37ceaa4a75f06b019cc238a1daca296c4dfd.jpg"
  },
  {
-  "t": "싱크대 하부장 슬라이딩 선반",
-  "u": "하부장 안쪽까지 꺼내 쓰는 수납",
-  "p": 43600,
-  "link": "https://link.coupang.com/a/hoSYwiRj1E",
-  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/retail/images/7945764113971-9df16e92-a8e1-40c4-92ea-7cd2d55ec5d6.jpg"
+  "t": "물걸레 로봇청소기",
+  "u": "턱 없는 신축 바닥에서 특히 잘 다녀요",
+  "p": 127900,
+  "link": "https://link.coupang.com/a/hKI1cmm94C",
+  "img": "https://thumbnail12.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/5f31/005b73e6240a5805743489b06c0b2137ba667640182339b18779d5216705.jpg"
  },
  {
-  "t": "충전식 센서등",
-  "u": "현관·드레스룸에 배선 없이 설치",
-  "p": 13000,
-  "link": "https://link.coupang.com/a/hoS0Y5StWK",
-  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/vendor_inventory/abbf/80a9ae24042128b15c791e15f8a896901dc668180d34cc13b23c484f10e6.jpeg"
+  "t": "고체 탈취제",
+  "u": "신발장·드레스룸 새집 냄새 제거",
+  "p": 18860,
+  "link": "https://link.coupang.com/a/hKI0rju9rE",
+  "img": "https://thumbnail10.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/image_audit/prod/76575d16-660d-4f96-be06-0691ec1ad670_fixing_v2.png"
  },
  {
-  "t": "결로 방지 테이프",
-  "u": "첫 겨울 창틀 결로·곰팡이 예방",
-  "p": 13400,
-  "link": "https://link.coupang.com/a/hoSYS9dUFo",
-  "img": "https://thumbnail.coupangcdn.com/thumbnails/remote/1000x1000ex/image/retail/images/2024/09/24/13/3/02941928-2aeb-4963-ba1f-d52109ce08e9.png"
+  "t": "독립스프링 매트리스 25cm",
+  "u": "새 집 새 침대, 리뷰 1만5천 건대",
+  "p": 142800,
+  "link": "https://link.coupang.com/a/hKI1CEcDyS",
+  "img": "https://thumbnail10.coupangcdn.com/thumbnails/remote/212x212ex/image/vendor_inventory/c9e6/401a9ab59e77fda02a635b8e7461ac6461e85f005763f6a78f2aa2649b83.jpg"
  }
 ]
 
@@ -495,7 +495,7 @@ def build_detail(it, items):
 {ad_slot()}
 {('<h2>청약 경쟁률</h2>' + ctable) if ctable else ''}
 <h2>원문 확인</h2><p>{' · '.join(links) or '청약홈(applyhome.co.kr)에서 단지명으로 검색해 공고 원문을 확인하세요.'}</p>
-<h2>입주 준비<span class="tag">광고·제휴</span></h2>
+<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>
 {aff_html(it['slug'])}
 {('<h2>' + esc(it['region']) + ' 다른 청약</h2><div class="grid">' + near_html + '</div>') if near_html else ''}
 """
