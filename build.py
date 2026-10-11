@@ -1114,7 +1114,7 @@ def main():
     for it in items:
         if it["status"][0] != "done" or (it.get("first") and (TODAY - it["first"]).days <= 90):
             market.gap(it, KEY, TODAY, _ty)
-    lh_rows = lhpub.fetch(KEY)
+    lh_rows = lhpub.homes(lhpub.fetch(KEY))
     global LH_N
     LH_N = len(lh_rows)
     (OUT / "apt").mkdir(parents=True, exist_ok=True)

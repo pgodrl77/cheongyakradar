@@ -22,7 +22,7 @@ def _find(o):
 
 def fetch(key):
     out = []
-    for page in range(1, 4):
+    for page in range(1, 8):
         q = urllib.parse.urlencode({"serviceKey": key, "PG_SZ": 100, "PAGE": page})
         try:
             with urllib.request.urlopen(f"{URL}?{q}", timeout=30) as r:
@@ -30,8 +30,18 @@ def fetch(key):
         except Exception as e:
             print("LH 공고 API 실패/미등록:", e)
             return out
+
+
+def homes(rows):
+    """상가·토지 공고는 빼고 주택(분양·임대·신혼희망타운 등)만."""
+    return [x for x in rows if not any(w in (x.get("UPP_AIS_TP_NM") or "") for w in ("상가", "토지"))]
         rows = _find(j) or []
         out += [{k.upper(): v for k, v in x.items()} for x in rows]
         if len(rows) < 100:
             break
     return out
+
+
+def homes(rows):
+    """상가·토지 공고는 빼고 주택(분양·임대·신혼희망타운 등)만."""
+    return [x for x in rows if not any(w in (x.get("UPP_AIS_TP_NM") or "") for w in ("상가", "토지"))]
