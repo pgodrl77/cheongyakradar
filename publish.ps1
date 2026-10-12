@@ -13,4 +13,7 @@ git add -A
 git -c user.name=pgodrl77 -c user.email=pgodrl77@users.noreply.github.com commit -q -m ("자동 갱신 " + (Get-Date -Format "yyyy-MM-dd HH:mm"))
 git push -q -f $url gh-pages
 Pop-Location
+# IndexNow: GitHub Pages 배포가 끝난 뒤(키 파일이 열려야 함) 바뀐 페이지만 빙·네이버에 알림. 실패해도 갱신은 성공 처리
+Start-Sleep 90
+try { python indexnow.py *>> build.log } catch { "IndexNow 실패: $_" | Out-File -Append build.log }
 "OK " + (Get-Date)

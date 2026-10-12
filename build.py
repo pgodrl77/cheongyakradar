@@ -439,6 +439,11 @@ def page(title, desc, body, path, extra_head=""):
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{SITE_NAME}">
+<meta property="og:url" content="{canonical}">
+<meta property="og:image" content="{SITE_URL}/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="alternate" type="application/rss+xml" title="{SITE_NAME} 청약 일정" href="{SITE_URL}/rss.xml">
 <link rel="manifest" href="{up}manifest.webmanifest">
 <meta name="theme-color" content="#1B64DA">
 <link rel="icon" type="image/png" sizes="32x32" href="{up}favicon-32.png">
@@ -1229,6 +1234,13 @@ def main():
     (OUT / "sitemap.xml").write_text("\n".join(sm), encoding="utf-8")
     (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
     (OUT / ".nojekyll").write_text("", encoding="utf-8")
+    import feeds, indexnow
+    (OUT / "rss.xml").write_text(feeds.rss(items, SITE_URL, SITE_NAME, d, short_addr), encoding="utf-8")
+    try:
+        feeds.og_image(OUT / "og.png")
+    except Exception as e:
+        print("og 이미지 실패:", e)
+    indexnow.write_key()
     write_pwa()
     print(f"완료: 단지 {len(items)}개, 페이지 {len(urls) + 1}개 → {OUT}")
 
