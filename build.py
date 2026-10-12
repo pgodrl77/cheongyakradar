@@ -299,6 +299,21 @@ def build_ics(it):
     return "\r\n".join(lines) + "\r\n"
 
 
+def gcal_links(it):
+    """구글 캘린더 바로 추가 링크(파일 없이 클릭 한 번) — 일정마다 하나씩."""
+    from urllib.parse import quote
+    r = it["d"]; name = r.get("HOUSE_NM") or "청약"
+    url = f"{SITE_URL}/apt/{it['slug']}.html"
+    out = []
+    for v, typ, lab in events(it):
+        nxt = v + dt.timedelta(days=1)
+        href = ("https://calendar.google.com/calendar/render?action=TEMPLATE"
+                f"&text={quote(f'[{lab}] {name}')}&dates={v:%Y%m%d}/{nxt:%Y%m%d}"
+                f"&details={quote('청약콕 ' + url)}")
+        out.append(f'<a class="gcal" href="{href.replace("&", "&amp;")}" target="_blank" rel="noopener">{lab}</a>')
+    return " · ".join(out)
+
+
 # ───────────────────────── 화면 ─────────────────────────
 
 CSS = """
@@ -678,7 +693,7 @@ def build_detail(it, items):
 <h2>한눈에 보기</h2>{glance_html(it)}
 {res_html}
 <h2>청약 일정</h2>{kv(sched)}
-{('<p style="margin:14px 0 0"><a class="btn" href="' + it['slug'] + '.ics" download>내 캘린더에 일정 추가</a> <span class="small muted">접수·발표 하루 전에 알림이 옵니다</span></p>') if events(it) else ''}
+{('<p style="margin:14px 0 0"><a class="btn" href="' + it['slug'] + '.ics" download>내 캘린더에 일정 추가</a> <span class="small muted">접수·발표 하루 전에 알림이 옵니다</span></p><p class="small" style="margin:8px 0 0">구글 캘린더에 바로 추가: ' + gcal_links(it) + '</p>') if events(it) else ''}
 <h2>단지 정보</h2>{kv(info)}
 <h2>주택형별 분양가</h2>{mtable}
 <h2>한눈에 보는 분석</h2><div class="note">{'<br>'.join(analysis) or '분석할 주택형 정보가 아직 없습니다.'}</div>
