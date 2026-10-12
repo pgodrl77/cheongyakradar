@@ -314,6 +314,22 @@ def gcal_links(it):
     return " · ".join(out)
 
 
+def cal_block(it):
+    """'내 캘린더에 일정 추가' — 아이폰·아이패드는 .ics 로 바로 캘린더 앱, 그 외는 구글 캘린더 선택 창.
+    (예전엔 모든 기기에서 .ics 를 내려받아 PC·안드로이드에선 '텍스트 파일이 저장됨'으로 보였음)"""
+    ics = it["slug"] + ".ics"
+    return ('<div style="margin:14px 0 0">'
+            '<button type="button" class="btn" id="calbtn">내 캘린더에 일정 추가</button> '
+            '<span class="small muted">일정을 눌러 캘린더에 저장하세요</span>'
+            '<div id="calbox" class="note" hidden style="margin-top:10px">'
+            '<b>구글 캘린더에 추가</b> (누르면 바로 등록 화면이 열립니다)<br>' + gcal_links(it) +
+            f'<div class="small muted" style="margin-top:6px">아이폰·아웃룩 사용자는 <a href="{ics}">일정 파일로 한 번에 추가</a> (하루 전 알림 포함)</div>'
+            '</div></div>'
+            '<script>(function(){var b=document.getElementById("calbtn"),x=document.getElementById("calbox");'
+            'b.onclick=function(){if(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)){'
+            f'location.href="{ics}";return}}x.hidden=!x.hidden}}}})();</script>')
+
+
 # ───────────────────────── 화면 ─────────────────────────
 
 CSS = """
@@ -693,7 +709,7 @@ def build_detail(it, items):
 <h2>한눈에 보기</h2>{glance_html(it)}
 {res_html}
 <h2>청약 일정</h2>{kv(sched)}
-{('<p style="margin:14px 0 0"><a class="btn" href="' + it['slug'] + '.ics" download>내 캘린더에 일정 추가</a> <span class="small muted">접수·발표 하루 전에 알림이 옵니다</span></p><p class="small" style="margin:8px 0 0">구글 캘린더에 바로 추가: ' + gcal_links(it) + '</p>') if events(it) else ''}
+{cal_block(it) if events(it) else ''}
 <h2>단지 정보</h2>{kv(info)}
 <h2>주택형별 분양가</h2>{mtable}
 <h2>한눈에 보는 분석</h2><div class="note">{'<br>'.join(analysis) or '분석할 주택형 정보가 아직 없습니다.'}</div>
