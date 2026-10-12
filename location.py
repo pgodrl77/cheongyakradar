@@ -54,11 +54,27 @@ def _coord(addr, name):
             return None
         if docs and docs[0].get("address_type") != "REGION":
             return float(docs[0]["x"]), float(docs[0]["y"])
-    if name:
-        sgg = " ".join((addr or "").split()[:2])
-        docs = _get("search/keyword.json", {"query": f"{sgg} {name}".strip(), "size": 1})
-        if docs:
+    # 택지지구 주소: 괄호 안이나 중간에 '○○동 123번지'가 있으면 '시 + 동 + 번지'로
+    city = re.search(r"\S+[시군](?=\s)", a)
+    for m in re.finditer(r"(\S+[동리가])\s*(\d+(?:-\d+)?)\s*(?:번지)?", addr or ""):
+        q = f"{city.group(0) if city else ''} {m.group(1)} {m.group(2)}".strip()
+        docs = _get("search/address.json", {"query": q, "size": 1})
+        if docs is None:
+            return None
+        if docs and docs[0].get("address_type") != "REGION":
             return float(docs[0]["x"]), float(docs[0]["y"])
+    # 마지막: 단지명 키워드 — 실제 아파트(공사 중 포함)만, 견본주택·홍보관은 위치가 달라 제외
+    if name:
+        sido = (addr or "").split()[0] if addr else ""
+        for q in (f"{sido} {name}".strip(),):
+            docs = _get("search/keyword.json", {"query": q, "size": 5})
+            if docs is None:
+                return None
+            for d in docs or []:
+                cat, nm = d.get("category_name", ""), d.get("place_name", "")
+                same_city = not city or city.group(0) in (d.get("address_name", "") + d.get("road_address_name", ""))
+                if same_city and "아파트" in cat and not any(k in cat + nm for k in ("분양", "견본", "모델하우스", "홍보관")):
+                    return float(d["x"]), float(d["y"])
     return None
 
 
@@ -103,15 +119,18 @@ def lookup(addr, name):
             _cache = json.loads(CACHE.read_text(encoding="utf-8"))
         except Exception:
             _cache = {}
-    if addr in _cache:
-        return _cache[addr] or None
+    v = _cache.get(addr)
+    if v and v.get("x"):
+        return v
+    if v is not None and v.get("fail", "") > time.strftime("%Y-%m-%d", time.localtime(time.time() - 7 * 86400)):
+        return None  # 실패한 주소는 7일 뒤 다시 시도
     if not key():
         return None
     c = _coord(addr, name)
     if not key():
         return None
     if not c:
-        _cache[addr] = {}
+        _cache[addr] = {"fail": time.strftime("%Y-%m-%d")}
         _dirty = True
         return None
     x, y = c
