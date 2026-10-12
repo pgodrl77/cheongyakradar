@@ -1244,6 +1244,16 @@ def main():
         print("og 이미지 실패:", e)
     indexnow.write_key()
     write_pwa()
+    # 네이버 블로그 청약 글(blogpost.py)용 데이터 — 사이트와 같은 값으로 글을 쓰게
+    blog = []
+    for it in items:
+        r = it["d"]
+        blog.append({"n": r.get("HOUSE_NM"), "u": f"{SITE_URL}/apt/{it['slug']}.html", "p": it["prefix"], "k": it["kind"],
+                     "rg": it["region"], "a": short_addr(r.get("HSSPLY_ADRES")), "s": it["status"][0],
+                     "ev": [[v.isoformat(), t, lab] for v, t, lab in events(it)], "ppp": it.get("ppp"),
+                     "ravg": it.get("region_avg"), "pr": price_range(it), "hh": r.get("TOT_SUPLY_HSHLDCO"),
+                     "bd": r.get("CNSTRCT_ENTRPS_NM"), "mv": ym(r.get("MVN_PREARNGE_YM")), "loc": it.get("loc")})
+    (ROOT / "data" / "blogdata.json").write_text(json.dumps({"today": TODAY.isoformat(), "items": blog}, ensure_ascii=False), encoding="utf-8")
     print(f"완료: 단지 {len(items)}개, 페이지 {len(urls) + 1}개 → {OUT}")
 
 
