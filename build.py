@@ -16,6 +16,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 import location
+import search
 
 ROOT = pathlib.Path(__file__).resolve().parent
 OUT = ROOT / "site"
@@ -451,6 +452,8 @@ def page(title, desc, body, path, extra_head=""):
 </div></header>
 <div class="bar"><div class="wrap barin"><span><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</span><button type="button" id="inst" class="inst" hidden>홈 화면에 앱 설치</button></div></div>
 <div id="ios" class="ios" hidden><div class="wrap">아이폰은 Safari 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 쓸 수 있어요. <button type="button" id="iosx" aria-label="닫기">닫기</button></div></div>
+{search.bar(up)}
+<script src="{up}assets/search.js"></script>
 <main class="wrap">
 {body}
 </main>
@@ -1184,7 +1187,11 @@ def main():
     LH_N = len(lh_rows)
     (OUT / "apt").mkdir(parents=True, exist_ok=True)
     (OUT / "assets").mkdir(parents=True, exist_ok=True)
-    (OUT / "assets" / "style.css").write_text(CSS.strip(), encoding="utf-8")
+    (OUT / "assets" / "style.css").write_text(CSS.strip() + search.CSS, encoding="utf-8")
+    (OUT / "assets" / "search.js").write_text(search.JS.strip(), encoding="utf-8")
+    (OUT / "search.json").write_text(search.index(items, short_addr, fmt_date), encoding="utf-8")
+    (OUT / "search.html").write_text(page(f"청약 단지 검색 | {SITE_NAME}", "아파트 청약 단지를 이름·지역으로 검색하세요.", search.PAGE_BODY, "search.html",
+                                          '<meta name="robots" content="noindex,follow">'), encoding="utf-8")
     (OUT / "index.html").write_text(build_index(items), encoding="utf-8")
     (OUT / "calc.html").write_text(build_calc(), encoding="utf-8")
     (OUT / "calendar.html").write_text(build_calendar(items), encoding="utf-8")
