@@ -13,7 +13,7 @@ function load(){if(!P)P=fetch('/search.json').then(function(r){return r.json()})
 function find(v){var t=String(v||'').trim().toLowerCase().split(/\s+/).filter(Boolean).map(norm);if(!t.length)return[];
 var o=D.filter(function(x){return t.every(function(w){return x.h.indexOf(w)>=0})});
 o.sort(function(a,b){var an=norm(a.n).indexOf(t[0])>=0?0:1,bn=norm(b.n).indexOf(t[0])>=0?0:1;return an-bn||a.o-b.o});return o}
-function row(x){return '<a href="/apt/'+x.u+'.html"><span class="b b-'+x.c+'">'+esc(x.s)+'</span> <b>'+esc(x.n)+'</b><span class="small muted"> '+esc(x.r)+(x.d?' · '+esc(x.d):'')+'</span></a>'}
+function row(x){return '<a href="/apt/'+x.u+'.html"><span class="b b-'+x.c+'">'+esc(x.s)+'</span> <b>'+esc(x.n)+'</b><span class="small muted"> '+esc(x.k)+(x.d?' · '+esc(x.d):'')+'</span></a>'}
 window.cySearch={load:load,find:find,row:row,esc:esc};
 if(!q)return;
 q.addEventListener('focus',load);
