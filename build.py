@@ -15,6 +15,8 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+import location
+
 ROOT = pathlib.Path(__file__).resolve().parent
 OUT = ROOT / "site"
 SITE_URL = os.environ.get("SITE_URL", "https://cheongyakkok.com")
@@ -711,6 +713,7 @@ def build_detail(it, items):
 <h2>청약 일정</h2>{kv(sched)}
 {cal_block(it) if events(it) else ''}
 <h2>단지 정보</h2>{kv(info)}
+{location.html(it.get('loc'), name, esc, kv)}
 <h2>주택형별 분양가</h2>{mtable}
 <h2>한눈에 보는 분석</h2><div class="note">{'<br>'.join(analysis) or '분석할 주택형 정보가 아직 없습니다.'}</div>
 {move_in}
@@ -903,6 +906,7 @@ def detail_faq(it):
     ss = score_summary(it)
     if ss:
         qas.append((f"{name} 당첨 가점 커트라인은 몇 점인가요?", f"가점제 당첨자 최저 점수는 {ss['min']}점({ss['min_ty']} {ss['min_res']})이고, 최고 점수는 {ss['max']}점입니다. 내 점수는 청약콕 가점 계산기로 바로 확인할 수 있습니다."))
+    qas += location.faq(it.get("loc"), name)
     return qas
 
 
@@ -1169,6 +1173,12 @@ def main():
     for it in items:
         if it["status"][0] != "done" or (it.get("first") and (TODAY - it["first"]).days <= 90):
             market.gap(it, KEY, TODAY, _ty)
+    # 입지(카카오 로컬, 캐시) — 새 단지만 조회
+    with ThreadPoolExecutor(6) as ex:
+        locs = list(ex.map(lambda it: location.lookup(it["d"].get("HSSPLY_ADRES"), it["d"].get("HOUSE_NM")), items))
+    for it, loc in zip(items, locs):
+        it["loc"] = loc
+    location.save()
     lh_rows = lhpub.homes(lhpub.fetch(KEY))
     global LH_N
     LH_N = len(lh_rows)
