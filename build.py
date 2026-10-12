@@ -15,6 +15,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+import calcs
 import location
 import search
 
@@ -375,6 +376,7 @@ tr:last-child td{border-bottom:0}
 .kv div:nth-child(odd){background:#F9FAFB;color:#4E5968}
 .note{background:#F9FAFB;border-radius:12px;padding:16px 18px;color:#333D4B}
 .calc label{display:block;font-weight:500;margin:14px 0 6px}
+.sel{height:40px;border:1px solid #D1D6DB;border-radius:8px;padding:0 10px;font:inherit;background:#fff}
 .calc select{width:100%;height:44px;border:1px solid #D1D6DB;border-radius:8px;padding:0 10px;font:inherit;background:#fff}
 .score{font-size:44px;font-weight:700;color:#1B64DA}
 .alert{background:#FFF0F0;color:#C4161C;border-radius:12px;padding:12px 16px;margin:0 0 18px;font-size:14px}.alert b{margin-right:8px}.alert a{color:#C4161C;font-weight:500}
@@ -419,7 +421,7 @@ def ad_slot():
 def asset_v():
     """CSS·JS 내용이 바뀌면 주소가 바뀌어 브라우저 캐시에 옛 디자인이 남지 않게(2026-10-11 검색창 미적용 사례)."""
     import hashlib
-    return hashlib.md5((CSS + search.CSS + search.JS).encode("utf-8")).hexdigest()[:8]
+    return hashlib.md5((CSS + calcs.CSS + search.CSS + search.JS).encode("utf-8")).hexdigest()[:8]
 
 
 def page(title, desc, body, path, extra_head=""):
@@ -459,7 +461,7 @@ def page(title, desc, body, path, extra_head=""):
 <body>
 <header><div class="wrap hd">
 <a class="logo" href="{up}index.html">{LOGO}{SITE_NAME}</a>
-<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}week.html">이번 주</a><a href="{up}jupjup.html">줍줍</a><a href="{up}calendar.html">청약 달력</a><a href="{up}calc.html">가점 계산기</a><a href="{up}move.html">이사 날짜</a><a href="{up}guide/index.html">청약 가이드</a></nav>
+<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}week.html">이번 주</a><a href="{up}jupjup.html">줍줍</a><a href="{up}calendar.html">청약 달력</a><a href="{up}rate.html">경쟁률</a><a href="{up}price.html">분양가</a><a href="{up}tools.html">계산기</a><a href="{up}guide/index.html">청약 가이드</a></nav>
 </div></header>
 <div class="bar"><div class="wrap barin"><span><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</span><button type="button" id="inst" class="inst" hidden>홈 화면에 앱 설치</button></div></div>
 <div id="ios" class="ios" hidden><div class="wrap">아이폰은 Safari 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 쓸 수 있어요. <button type="button" id="iosx" aria-label="닫기">닫기</button></div></div>
@@ -469,7 +471,7 @@ def page(title, desc, body, path, extra_head=""):
 {body}
 </main>
 <footer><div class="wrap">
-<div><a href="{up}about.html">서비스 소개</a><a href="{up}contact.html">문의</a><a href="{up}privacy.html">개인정보처리방침</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}move.html">손 없는 날 달력</a><a href="{up}calc.html">청약 가점 계산기</a><a href="{up}week.html">이번 주 청약 일정</a><a href="{up}jupjup.html">무순위 줍줍 일정</a></div>
+<div><a href="{up}about.html">서비스 소개</a><a href="{up}contact.html">문의</a><a href="{up}privacy.html">개인정보처리방침</a><a href="{up}terms.html">이용약관</a><a href="{up}tools.html">청약 계산기</a><a href="{up}rate.html">경쟁률·커트라인</a><a href="{up}guide/index.html">청약 가이드</a><a href="{up}move.html">손 없는 날 달력</a><a href="{up}calc.html">청약 가점 계산기</a><a href="{up}week.html">이번 주 청약 일정</a><a href="{up}jupjup.html">무순위 줍줍 일정</a></div>
 <p>데이터 출처: 한국부동산원 청약홈 분양정보(공공데이터포털 오픈API). 정보는 자동으로 정리되며 오류가 있을 수 있습니다. 청약 전 반드시 청약홈의 입주자모집공고 원문을 확인하세요.</p>
 <p>일부 링크는 제휴 링크이며, 이를 통해 일정 수수료를 받을 수 있습니다.</p>
 <p>© {TODAY.year} {SITE_NAME}</p>
@@ -540,7 +542,11 @@ def build_index(items):
 {ad_slot()}
 <h2 id="done">최근 마감된 청약</h2>
 {TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in done)}</tbody></table></div>
-<div class="grid" style="margin-top:24px"><a class="card" href="week.html"><b style="display:block;margin-bottom:6px">이번 주 청약 일정 →</b><span class="small muted">요일별 특별공급·1순위·당첨 발표</span></a><a class="card" href="jupjup.html"><b style="display:block;margin-bottom:6px">무순위 줍줍 일정 →</b><span class="small muted">잔여세대·임의공급만 모아 보기</span></a>{'<a class="card" href="public.html"><b style="display:block;margin-bottom:6px">LH 공공분양·임대 →</b><span class="small muted">행복주택·국민임대 공고 모음</span></a>' if LH_N else ''}</div>
+<div class="grid" style="margin-top:24px"><a class="card" href="week.html"><b style="display:block;margin-bottom:6px">이번 주 청약 일정 →</b><span class="small muted">요일별 특별공급·1순위·당첨 발표</span></a><a class="card" href="jupjup.html"><b style="display:block;margin-bottom:6px">무순위 줍줍 일정 →</b><span class="small muted">잔여세대·임의공급만 모아 보기</span></a><a class="card" href="price.html"><b style="display:block;margin-bottom:6px">평당 분양가 랭킹 →</b><span class="small muted">최근 분양 단지 평당가 순위·시도 평균</span></a>{'<a class="card" href="public.html"><b style="display:block;margin-bottom:6px">LH 공공분양·임대 →</b><span class="small muted">행복주택·국민임대 공고 모음</span></a>' if LH_N else ''}</div>
+{rate_preview(items)}
+<h2>청약 계산기</h2>
+<div class="grid toolgrid">{''.join(f'<a class="card" href="{u}"><b>{t} →</b><span class="small muted">{dd}</span></a>' for u, t, dd in calcs.TOOLS[:5])}</div>
+<p class="small muted" style="margin-top:8px">모든 계산은 브라우저 안에서만 이루어지며 입력값은 서버로 전송되지 않습니다. <a href="tools.html">계산기 전체 보기 →</a></p>
 <h2>날짜별로 보고 싶다면</h2>
 <div class="card"><p style="margin:0 0 10px">특별공급·1순위 접수일과 당첨자 발표일을 달력 한 장에 모았습니다.</p><a href="calendar.html"><b>청약 달력 열기 →</b></a></div>
 <h2>내 점수로 당첨될 수 있을까?</h2>
@@ -702,7 +708,8 @@ def build_detail(it, items):
         if ss:
             lines.append(f"가점제 당첨자 최저 점수는 <b>{ss['min']}점</b>({esc(ss['min_ty'])} {esc(ss['min_res'])}), 최고 점수는 {ss['max']}점입니다. 내 점수는 <a href=\"../calc.html\">가점 계산기</a>로 비교해 보세요.")
         res_html = (f"<h2>{esc(name)} 경쟁률·당첨 가점 결과</h2>" + (f'<div class="note">{"<br>".join(lines)}</div>' if lines else "")
-                    + (("<h3>주택형별 경쟁률</h3>" + ctable) if ctable else "") + (("<h3>당첨 가점(최저·평균·최고)</h3>" + stable) if stable else ""))
+                    + (("<h3>주택형별 경쟁률</h3>" + ctable) if ctable else "") + (("<h3>당첨 가점(최저·평균·최고)</h3>" + myscore_box("../") + stable + MYSCORE_JS) if stable else "")
+                    + '<p class="small"><a href="../rate.html">다른 단지 경쟁률·커트라인 모아 보기 →</a></p>')
     faq_html, faq_ld = faq_block(detail_faq(it))
     # 수익 배치(2026-10-11): 접수 전·중·발표 대기 단지는 애드센스만, 마감(발표 후) 단지만 입주 준비 상담·상품
     move_in = ""
@@ -729,6 +736,7 @@ def build_detail(it, items):
 <h2>단지 정보</h2>{kv(info)}
 {location.html(it.get('loc'), name, esc, kv)}
 <h2>주택형별 분양가</h2>{mtable}
+{fund_block(it)}
 <h2>한눈에 보는 분석</h2><div class="note">{'<br>'.join(analysis) or '분석할 주택형 정보가 아직 없습니다.'}</div>
 {move_in}
 {ad_slot()}
@@ -846,7 +854,7 @@ def build_score(rows):
     def sc(v):
         n = num(v)
         return f"{n:g}점" if n else "-"
-    out = "".join(f"<tr><td>{area_label(s.get('HOUSE_TY'))}</td><td>{esc(s.get('RESIDE_SENM'))}</td>"
+    out = "".join(f"<tr{(' data-min=' + chr(34) + format(num(s.get('LWET_SCORE')), 'g') + chr(34)) if (num(s.get('LWET_SCORE')) or 0) > 0 else ''}><td>{area_label(s.get('HOUSE_TY'))}</td><td>{esc(s.get('RESIDE_SENM'))}</td>"
                   f"<td><b>{sc(s.get('LWET_SCORE'))}</b></td><td>{sc(s.get('AVRG_SCORE'))}</td><td>{sc(s.get('TOP_SCORE'))}</td></tr>" for s in rows)
     return ('<div class="tbl"><table><thead><tr><th>주택형</th><th>거주 구분</th><th>최저 당첨 가점</th><th>평균</th><th>최고</th></tr></thead><tbody>'
             + out + "</tbody></table></div><p class='small muted'>가점제 당첨자 기준입니다. 표에 없는 주택형은 추첨제이거나 미달 등으로 가점 결과가 공개되지 않은 경우입니다.</p>")
@@ -1128,7 +1136,7 @@ def build_guides():
 
 def build_privacy():
     body = f"""<h1>개인정보처리방침</h1>
-<p>{SITE_NAME}는 회원가입이 없으며 이름·연락처 등 개인정보를 수집하지 않습니다. 청약 가점 계산기에 입력한 값은 브라우저 안에서만 계산되고 서버로 전송되지 않습니다.</p>
+<p>{SITE_NAME}는 회원가입이 없으며 이름·연락처 등 개인정보를 수집하지 않습니다. 청약 가점·취득세·DSR·중도금 이자 등 계산기에 입력한 값은 브라우저 안에서만 계산되고 서버로 전송되지 않습니다.</p>
 <p>이 사이트는 Google 애드센스 광고를 게재할 수 있으며, Google 등 제3자 광고 사업자는 쿠키를 사용해 이용자의 이전 방문 기록을 바탕으로 광고를 표시할 수 있습니다. 이용자는 Google 광고 설정에서 맞춤 광고를 끌 수 있습니다.</p>
 <p>일부 링크는 제휴 링크이며, 이를 통해 구매·상담이 이루어지면 일정 수수료를 받을 수 있습니다.</p>
 <p>개인정보 관련 문의: {CONTACT_EMAIL}</p>
@@ -1179,6 +1187,162 @@ def write_pwa():
             shutil.copy2(f, OUT / f.name)
 
 
+# ───────────────────────── 경쟁률·커트라인 / 평당 분양가 랭킹 (2026-10-12 벤치마킹 추가) ─────────────────────────
+
+MYSCORE_JS = """<script>(function(){var i=document.getElementById('my'),o=document.getElementById('myout'),k='cy_myscore';
+function run(){var v=parseFloat(i.value),n=0,t=0;document.querySelectorAll('tr[data-min]').forEach(function(tr){if(tr.style.display==='none')return;var m=parseFloat(tr.getAttribute('data-min'));tr.classList.remove('win','lose');if(isNaN(v)||isNaN(m))return;t++;if(v>=m){tr.classList.add('win');n++}else tr.classList.add('lose')});
+o.textContent=isNaN(v)?'':('내 점수 '+v+'점이면 '+t+'개 주택형 중 '+n+'개가 당첨권(최저 가점 이상)입니다.');try{localStorage.setItem(k,i.value)}catch(e){}}
+try{var s=localStorage.getItem(k);if(s)i.value=s}catch(e){}i.addEventListener('input',run);window.cyMyRun=run;run()})();</script>"""
+
+
+def myscore_box(up=""):
+    return (f'<div class="myscore"><label for="my"><b>내 가점</b></label><input id="my" type="number" inputmode="numeric" min="0" max="84" placeholder="예: 52">'
+            f'<span class="small muted">점 · 모르면 <a href="{up}calc.html">가점 계산기</a></span></div><p class="small" id="myout" style="margin:0 0 10px"></p>')
+
+
+def rate_rows(items):
+    out = []
+    for it in items:
+        if it["prefix"] != "apt":
+            continue
+        cmp_by = {}
+        for c in it.get("cmp") or []:
+            if str(c.get("SUBSCRPT_RANK_CODE")) == "1":
+                cmp_by.setdefault((str(c.get("HOUSE_TY") or "").strip(), str(c.get("RESIDE_SENM") or "").strip()), c)
+                cmp_by.setdefault((str(c.get("HOUSE_TY") or "").strip(), ""), c)
+        pub = d(it["d"].get("RCRIT_PBLANC_DE"))
+        scores = [s for s in (it.get("score") or []) if (num(s.get("LWET_SCORE")) or 0) > 0]
+        for s in scores:
+            ty = str(s.get("HOUSE_TY") or "").strip()
+            c = cmp_by.get((ty, str(s.get("RESIDE_SENM") or "").strip())) or cmp_by.get((ty, ""))
+            out.append({"it": it, "ty": ty, "res": s.get("RESIDE_SENM") or "", "min": num(s.get("LWET_SCORE")),
+                        "avg": num(s.get("AVRG_SCORE")), "max": num(s.get("TOP_SCORE")),
+                        "rate": num(str(c.get("CMPET_RATE") or "").split("(")[0]) if c else None, "pub": pub})
+    out.sort(key=lambda x: (x["pub"] or dt.date(2000, 1, 1)), reverse=True)
+    return out
+
+
+def rate_tr(x, pre=""):
+    it = x["it"]
+    rt = f'{x["rate"]:g} : 1' if x["rate"] else "-"
+    avg = f'{x["avg"]:g}점' if x["avg"] else "-"
+    mx = f'{x["max"]:g}점' if x["max"] else "-"
+    pub = f'{x["pub"]:%Y.%m.%d}' if x["pub"] else "-"
+    return (f'<tr data-min="{x["min"]:g}" data-r="{esc(it["region"])}" data-rate="{x["rate"] or 0}" data-pub="{x["pub"] or ""}">'
+            f'<td><a href="{pre}apt/{it["slug"]}.html"><b>{esc(it["d"].get("HOUSE_NM"))}</b></a><div class="small muted">{esc(short_addr(it["d"].get("HSSPLY_ADRES")))}</div></td>'
+            f'<td>{area_label(x["ty"])} <span class="small muted">{esc(x["ty"])}</span></td><td>{esc(x["res"])}</td><td>{rt}</td>'
+            f'<td><b>{x["min"]:g}점</b></td><td>{avg}</td><td>{mx}</td><td>{pub}</td></tr>')
+
+
+RATE_HEAD = ('<div class="tbl"><table id="rt"><thead><tr><th>단지명</th><th>주택형</th><th>거주 구분</th><th>1순위 경쟁률</th><th>최저 가점</th><th>평균</th><th>최고</th><th>공고일</th></tr></thead><tbody>')
+
+
+def rate_preview(items):
+    rows = rate_rows(items)[:10]
+    if not rows:
+        return ""
+    return ("<h2>최근 경쟁률·최저 당첨 가점</h2>" + myscore_box() + RATE_HEAD + "".join(rate_tr(x) for x in rows) + "</tbody></table></div>"
+            '<p style="margin-top:8px"><a href="rate.html"><b>경쟁률·커트라인 전체 보기 →</b></a></p>' + MYSCORE_JS)
+
+
+def build_rate(items):
+    rows = rate_rows(items)
+    regions = sorted({x["it"]["region"] for x in rows})
+    opts = '<option value="">시·도 전체</option>' + "".join(f'<option>{esc(r)}</option>' for r in regions)
+    n_apts = len({id(x["it"]) for x in rows})
+    low = sorted(rows, key=lambda x: x["min"])[:3]
+    low_txt = ""
+    if low:
+        low_txt = "최근 공고 중 최저 당첨 가점이 가장 낮았던 곳은 " + ", ".join(f'<a href="apt/{x["it"]["slug"]}.html">{esc(x["it"]["d"].get("HOUSE_NM"))}</a> {area_label(x["ty"])}({x["min"]:g}점)' for x in low) + "입니다."
+    body = f"""
+<p class="small muted"><a href="index.html">청약 일정</a> › 경쟁률·커트라인</p>
+<h1>단지별 청약 경쟁률·당첨 가점 커트라인</h1>
+<p class="lead">최근 {LOOKBACK_DAYS}일 동안 결과가 나온 아파트 {n_apts}곳의 주택형별 1순위 경쟁률과 최저·평균·최고 당첨 가점입니다. 내 가점을 넣으면 당첨권(최저 가점 이상)인 주택형이 초록색으로 표시됩니다. {low_txt}</p>
+<p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 청약홈 당첨 가점 공개 자료 기준</p>
+{myscore_box()}
+<div class="row2" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><select id="rg" class="sel">{opts}</select>
+<select id="so" class="sel"><option value="pub">최근 공고 순</option><option value="rate">경쟁률 높은 순</option><option value="min">커트라인 낮은 순</option></select></div>
+{RATE_HEAD}{''.join(rate_tr(x) for x in rows) or '<tr><td colspan="8">아직 공개된 당첨 가점이 없습니다.</td></tr>'}</tbody></table></div>
+<p class="small muted">가점제 당첨자 기준입니다. 추첨제 물량이나 미달 주택형은 가점이 공개되지 않아 표에 없습니다.</p>
+{ad_slot()}
+<div class="note">커트라인은 <b>해당지역 1순위</b>에서 먼저 정해지고, 남은 물량이 기타지역으로 넘어갑니다. 같은 단지라도 주택형마다 10점 이상 차이가 나는 경우가 많으니 비인기 타입을 노리는 것도 방법입니다. 내 점수가 모자라면 <a href="jupjup.html">무순위 줍줍</a>이나 추첨 물량을 함께 보세요.</div>
+<script>(function(){{var tb=document.querySelector('#rt tbody'),rg=document.getElementById('rg'),so=document.getElementById('so');
+function f(){{var r=rg.value,rows=[].slice.call(tb.querySelectorAll('tr[data-min]'));rows.forEach(function(tr){{tr.style.display=(!r||tr.getAttribute('data-r')===r)?'':'none'}});
+var k=so.value;rows.sort(function(a,b){{if(k==='rate')return b.getAttribute('data-rate')-a.getAttribute('data-rate');if(k==='min')return a.getAttribute('data-min')-b.getAttribute('data-min');return b.getAttribute('data-pub')<a.getAttribute('data-pub')?-1:1}});rows.forEach(function(tr){{tb.appendChild(tr)}});if(window.cyMyRun)cyMyRun()}}
+rg.onchange=f;so.onchange=f}})();</script>
+{MYSCORE_JS}
+"""
+    qas = [("청약 당첨 가점 커트라인은 어디서 보나요?", "청약홈이 공개하는 단지별 당첨자 가점(최저·평균·최고)을 청약콕이 매일 모아 이 페이지에 정리합니다. 단지명을 누르면 주택형별 상세 결과를 볼 수 있습니다."),
+           ("최저 당첨 가점보다 내 점수가 높으면 무조건 당첨인가요?", "아닙니다. 최저 가점은 지난 공고의 결과라 다음 공고의 경쟁 상황에 따라 달라지고, 동점이면 추첨으로 정합니다. 참고 기준으로만 보세요."),
+           ("가점이 낮으면 어떻게 하나요?", "전용 85㎡ 초과나 추첨제 비율이 높은 주택형, 무순위(줍줍), 특별공급을 함께 노리는 방법이 있습니다.")]
+    fb, ld = faq_block(qas)
+    return page(f"청약 경쟁률·당첨 가점 커트라인 {TODAY:%Y년 %m월} - 단지별 최저 가점 | {SITE_NAME}",
+                "최근 아파트 청약 단지별 1순위 경쟁률과 최저·평균·최고 당첨 가점을 정리했습니다. 내 가점을 넣으면 당첨권 주택형을 바로 표시합니다.", body + fb, "rate.html", ld)
+
+
+def build_price(items):
+    apts = [x for x in items if x["prefix"] == "apt" and x.get("ppp")]
+    apts.sort(key=lambda x: -x["ppp"])
+    reg = {}
+    for x in apts:
+        reg.setdefault(x["region"], []).append(x["ppp"])
+    reg_rows = sorted(((r, round(sum(v) / len(v)), len(v)) for r, v in reg.items()), key=lambda t: -t[1])
+    regions = [r for r, _, _ in reg_rows]
+    pills = '<button type="button" class="on" data-r="">전체</button>' + "".join(f'<button type="button" data-r="{esc(r)}">{esc(r)}</button>' for r in sorted(regions))
+    trs = []
+    for i, x in enumerate(apts, 1):
+        r = x["d"]
+        cmpv = ""
+        if x.get("region_avg"):
+            diff = (x["ppp"] - x["region_avg"]) / x["region_avg"] * 100
+            cmpv = f'<span class="{"ng" if diff > 0 else "ok"}">{"+" if diff > 0 else ""}{diff:.0f}%</span>'
+        trs.append(f'<tr data-region="{esc(x["region"])}"><td class="rk">{i}</td><td><a href="apt/{x["slug"]}.html"><b>{esc(r.get("HOUSE_NM"))}</b></a><div class="small muted">{esc(short_addr(r.get("HSSPLY_ADRES")))}</div></td>'
+                   f'<td><b>{x["ppp"]:,}만원</b></td><td>{esc(price_range(x) or "-")}</td><td>{cmpv or "-"}</td><td>{fmt_full(r.get("RCRIT_PBLANC_DE"))}</td></tr>')
+    avg_tbl = "".join(f"<tr><td>{esc(r)}</td><td><b>{a:,}만원</b></td><td>{n}곳</td></tr>" for r, a, n in reg_rows)
+    top = apts[0] if apts else None
+    lead_extra = f' 가장 비싼 곳은 <a href="apt/{top["slug"]}.html">{esc(top["d"].get("HOUSE_NM"))}</a>(평당 {top["ppp"]:,}만원)입니다.' if top else ""
+    body = f"""
+<p class="small muted"><a href="index.html">청약 일정</a> › 평당 분양가</p>
+<h1>평당 분양가 랭킹 — 최근 분양 아파트 {len(apts)}곳</h1>
+<p class="lead">최근 {LOOKBACK_DAYS}일 동안 공고된 아파트의 평당(3.3㎡) 분양가를 높은 순으로 정리했습니다. 주택형별 최고 분양가를 공급면적으로 나눈 평균값입니다.{lead_extra}</p>
+<p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 지역 평균 대비는 같은 시·도 아파트 평균과 비교</p>
+<div class="pills" role="group" aria-label="지역 선택">{pills}</div>
+<div class="tbl"><table id="pt" style="min-width:640px"><thead><tr><th>순위</th><th>단지명</th><th>평당 분양가</th><th>분양가(최고가 기준)</th><th>지역 평균 대비</th><th>공고일</th></tr></thead><tbody>{''.join(trs) or '<tr><td colspan="6">자료가 없습니다.</td></tr>'}</tbody></table></div>
+{ad_slot()}
+<h2>시·도별 평균 평당 분양가</h2>
+<div class="tbl"><table style="min-width:360px"><thead><tr><th>시·도</th><th>평균 평당가</th><th>단지 수</th></tr></thead><tbody>{avg_tbl}</tbody></table></div>
+<p class="small muted" style="margin-top:8px">분양가에는 발코니 확장비·옵션이 빠져 있습니다. 실제 들어가는 돈은 <a href="interest.html">중도금 이자</a>와 <a href="tax.html">취득세</a>까지 더해 보세요.</p>
+<script>document.querySelectorAll('.pills button').forEach(function(b){{b.addEventListener('click',function(){{
+document.querySelectorAll('.pills button').forEach(function(x){{x.classList.remove('on')}});b.classList.add('on');var r=b.getAttribute('data-r');
+document.querySelectorAll('#pt tbody tr').forEach(function(tr){{tr.style.display=(!r||tr.getAttribute('data-region')===r)?'':'none'}});}})}});</script>
+"""
+    return page(f"평당 분양가 랭킹 {TODAY:%Y년 %m월} - 최근 분양 아파트 순위·지역 평균 | {SITE_NAME}",
+                "최근 분양한 아파트의 평당(3.3㎡) 분양가 순위와 시·도별 평균 평당 분양가를 매일 정리합니다.", body, "price.html")
+
+
+def fund_block(it):
+    """단지 페이지 자금 계획(예상): 주택형 고르면 계약금·중도금·잔금·취득세, 계산기로 연결."""
+    opts = []
+    for m in it["mdl"]:
+        amt = num(m.get("LTTOT_TOP_AMOUNT"))
+        if amt:
+            ty = str(m.get("HOUSE_TY") or "").strip()
+            opts.append(f'<option value="{int(amt)}" data-big="{1 if _ty(m) > 85 else 0}">{area_label(ty)} {esc(ty)} · {won(amt)}</option>')
+    if not opts:
+        return ""
+    return ("<h2>자금 계획(예상)</h2>"
+            f'<div class="card calc"><label for="fty">주택형 선택</label><select id="fty">{"".join(opts)}</select>'
+            '<div class="kv" id="fdet" style="margin-top:12px"></div>'
+            '<p class="small muted" style="margin:10px 0 0">계약금 10%·중도금 60%·잔금 30%의 일반적인 비율로 나눈 값입니다. 실제 비율·회차와 발코니 확장비는 공고문을 확인하세요. 취득세는 무주택자가 1주택을 사는 경우입니다.</p>'
+            '<p style="margin:10px 0 0" id="flinks"></p></div>'
+            '<script>(function(){var s=document.getElementById("fty");function m(v){v=Math.round(v);var e=Math.floor(v/10000),r=v%10000;return e?(e+"억"+(r?" "+r.toLocaleString()+"만원":"원")):(r.toLocaleString()+"만원")}'
+            'function f(){var p=+s.value,big=s.options[s.selectedIndex].getAttribute("data-big")==="1";'
+            'var tr=p<=60000?1:(p<=90000?Math.round((p/10000*2/3-3)*100)/100:3),tax=p*(tr*1.1+(big?0.2:0))/100;'
+            'document.getElementById("fdet").innerHTML="<div>계약금 10%</div><div>"+m(p*.1)+"</div><div>중도금 60%</div><div>"+m(p*.6)+"</div><div>잔금 30%</div><div>"+m(p*.3)+"</div><div>예상 취득세(합계)</div><div>"+m(tax)+"</div><div>계약 때 필요한 현금</div><div><b>"+m(p*.1)+"</b></div>";'
+            'document.getElementById("flinks").innerHTML="<a href=\\"../interest.html?p="+p+"\\">이 분양가로 중도금 이자 계산 →</a> · <a href=\\"../tax.html?p="+p+"\\">취득세 자세히 →</a> · <a href=\\"../dsr.html\\">잔금대출 한도 →</a>"}'
+            's.onchange=f;f()})();</script>')
+
+
 def main():
     global KEY
     KEY = load_key()
@@ -1198,13 +1362,21 @@ def main():
     LH_N = len(lh_rows)
     (OUT / "apt").mkdir(parents=True, exist_ok=True)
     (OUT / "assets").mkdir(parents=True, exist_ok=True)
-    (OUT / "assets" / "style.css").write_text(CSS.strip() + search.CSS, encoding="utf-8")
+    (OUT / "assets" / "style.css").write_text(CSS.strip() + calcs.CSS + search.CSS, encoding="utf-8")
     (OUT / "assets" / "search.js").write_text(search.JS.strip(), encoding="utf-8")
     (OUT / "search.json").write_text(search.index(items, short_addr, fmt_date), encoding="utf-8")
     (OUT / "search.html").write_text(page(f"청약 단지 검색 | {SITE_NAME}", "아파트 청약 단지를 이름·지역으로 검색하세요.", search.PAGE_BODY, "search.html",
                                           '<meta name="robots" content="noindex,follow">'), encoding="utf-8")
     (OUT / "index.html").write_text(build_index(items), encoding="utf-8")
     (OUT / "calc.html").write_text(build_calc(), encoding="utf-8")
+    (OUT / "tools.html").write_text(calcs.build_tools(page, esc, ad_slot, SITE_NAME), encoding="utf-8")
+    (OUT / "tax.html").write_text(calcs.build_tax(page, esc, ad_slot, SITE_NAME, cpa_html), encoding="utf-8")
+    (OUT / "dsr.html").write_text(calcs.build_dsr(page, esc, ad_slot, SITE_NAME), encoding="utf-8")
+    (OUT / "interest.html").write_text(calcs.build_interest(page, esc, ad_slot, SITE_NAME), encoding="utf-8")
+    (OUT / "bankbook.html").write_text(calcs.build_bankbook(page, esc, ad_slot, SITE_NAME, TODAY), encoding="utf-8")
+    (OUT / "terms.html").write_text(calcs.build_terms(page, SITE_NAME, CONTACT_EMAIL), encoding="utf-8")
+    (OUT / "rate.html").write_text(build_rate(items), encoding="utf-8")
+    (OUT / "price.html").write_text(build_price(items), encoding="utf-8")
     (OUT / "calendar.html").write_text(build_calendar(items), encoding="utf-8")
     (OUT / "about.html").write_text(build_about(), encoding="utf-8")
     (OUT / "privacy.html").write_text(build_privacy(), encoding="utf-8")
@@ -1219,7 +1391,8 @@ def main():
     if lh_rows:
         (OUT / "public.html").write_text(build_public(lh_rows), encoding="utf-8")
         extra.append("public.html")
-    urls = extra + ["", "week.html", "jupjup.html", "calendar.html", "calc.html", "move.html", "about.html", "contact.html"]
+    urls = extra + ["", "week.html", "jupjup.html", "calendar.html", "calc.html", "move.html", "about.html", "contact.html",
+                     "rate.html", "price.html", "tools.html", "tax.html", "dsr.html", "interest.html", "bankbook.html", "terms.html"]
     for path, htmltxt in build_guides():
         (OUT / path).write_text(htmltxt, encoding="utf-8")
         urls.append(path)
