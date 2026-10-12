@@ -416,6 +416,12 @@ def ad_slot():
             '<script>(adsbygoogle=window.adsbygoogle||[]).push({});</script></div>' % ADSENSE_CLIENT)
 
 
+def asset_v():
+    """CSS·JS 내용이 바뀌면 주소가 바뀌어 브라우저 캐시에 옛 디자인이 남지 않게(2026-10-11 검색창 미적용 사례)."""
+    import hashlib
+    return hashlib.md5((CSS + search.CSS + search.JS).encode("utf-8")).hexdigest()[:8]
+
+
 def page(title, desc, body, path, extra_head=""):
     canonical = f"{SITE_URL}/{path}".rstrip("/") if path else SITE_URL + "/"
     ads = (f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE_CLIENT}" crossorigin="anonymous"></script>' if ADSENSE_CLIENT else "")
@@ -442,7 +448,7 @@ def page(title, desc, body, path, extra_head=""):
 <meta name="apple-mobile-web-app-title" content="{SITE_NAME}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="{up}assets/style.css">
+<link rel="stylesheet" href="{up}assets/style.css?v={asset_v()}">
 {ads}{naver}{extra_head}
 </head>
 <body>
@@ -453,7 +459,7 @@ def page(title, desc, body, path, extra_head=""):
 <div class="bar"><div class="wrap barin"><span><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</span><button type="button" id="inst" class="inst" hidden>홈 화면에 앱 설치</button></div></div>
 <div id="ios" class="ios" hidden><div class="wrap">아이폰은 Safari 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 쓸 수 있어요. <button type="button" id="iosx" aria-label="닫기">닫기</button></div></div>
 {search.bar(up)}
-<script src="{up}assets/search.js"></script>
+<script src="{up}assets/search.js?v={asset_v()}"></script>
 <main class="wrap">
 {body}
 </main>

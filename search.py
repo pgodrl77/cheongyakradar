@@ -25,12 +25,17 @@ q.addEventListener('keydown',function(e){if(e.key==='Escape')box.hidden=true});
 """
 
 CSS = """
-.srch{position:relative;max-width:560px;margin:14px auto 0}
-.srch form{display:flex;gap:8px}
-.srch input{flex:1;min-width:0;height:44px;border:1px solid #D1D6DB;border-radius:10px;padding:0 14px;font:inherit;font-size:15px;background:#fff;color:#191F28}
-.srch input:focus{outline:none;border-color:#1B64DA;box-shadow:0 0 0 3px #E8F3FF}
-.srch button{height:44px;padding:0 16px;border:0;border-radius:10px;background:#1B64DA;color:#fff;font:inherit;font-weight:700;cursor:pointer}
-.sres{position:absolute;left:0;right:0;top:50px;z-index:20;background:#fff;border:1px solid #E5E8EB;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.08);overflow:hidden}
+.srch{position:relative;max-width:680px;margin:22px auto 6px}
+.srch form{display:flex;align-items:center;height:56px;border:2px solid #1B64DA;border-radius:16px;background:#fff;box-shadow:0 6px 20px rgba(27,100,218,.12);overflow:hidden}
+.srch form::before{content:"";flex:0 0 22px;height:22px;margin-left:18px;background:no-repeat center/22px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B64DA' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E")}
+.srch input{flex:1;min-width:0;height:100%;border:0;padding:0 12px;font:inherit;font-size:17px;background:transparent;color:#191F28;-webkit-appearance:none;appearance:none}
+.srch input::placeholder{color:#8B95A1}
+.srch input:focus{outline:none}
+.srch form:focus-within{box-shadow:0 0 0 4px #E8F3FF,0 6px 20px rgba(27,100,218,.12)}
+.srch button{flex:0 0 auto;height:44px;margin-right:6px;padding:0 22px;border:0;border-radius:12px;background:#1B64DA;color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.srch button:hover{background:#1957C2}
+@media(max-width:640px){.srch{margin:16px auto 4px}.srch form{height:50px;border-radius:14px}.srch input{font-size:16px}.srch button{height:38px;padding:0 16px;font-size:15px}}
+.sres{position:absolute;left:0;right:0;top:62px;z-index:20;background:#fff;border:1px solid #E5E8EB;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.08);overflow:hidden}
 .sres a,.sres .none{display:block;padding:10px 14px;border-top:1px solid #F2F4F6;color:#191F28;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sres a:first-child{border-top:0}.sres a:hover{background:#F9FAFB}.sres .all{color:#1B64DA;font-weight:500}.sres .none{color:#8B95A1}
 .slist a{display:block;padding:12px 0;border-bottom:1px solid #F2F4F6;color:#191F28;text-decoration:none}
@@ -39,7 +44,7 @@ CSS = """
 
 def bar(up):
     return (f'<div class="wrap"><div class="srch" id="sf"><form action="{up}search.html" role="search">'
-            '<input id="q" name="q" type="search" placeholder="단지명·지역 검색 (예: 부천, 롯데캐슬, 행복주택)" autocomplete="off" aria-label="청약 단지 검색">'
+            '<input id="q" name="q" type="search" placeholder="단지명·지역으로 찾기 (예: 부천, 롯데캐슬)" autocomplete="off" aria-label="청약 단지 검색">'
             '<button type="submit">검색</button></form><div id="sres" class="sres" hidden></div></div></div>')
 
 
