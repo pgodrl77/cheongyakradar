@@ -9,3 +9,6 @@ app/*.zip
 app/*.aab
 app/*.apk
 app/twa_*.txt
+clips/*.mp4
+clips/_work-*/
+clip_log.txt
