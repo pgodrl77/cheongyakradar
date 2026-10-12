@@ -1243,6 +1243,13 @@ def main():
     except Exception as e:
         print("og 이미지 실패:", e)
     indexnow.write_key()
+    # 안드로이드 앱(TWA, com.cheongyakkok.app) 연결 — 주소창 없이 열리게. 지문: 업로드 키(2026-10-11 생성).
+    # 플레이 콘솔에 올린 뒤 '앱 서명 키' SHA-256 을 APP_SHA256 에 추가해야 함(Play App Signing 이 다시 서명하므로)
+    APP_SHA256 = ["13:FB:1F:EB:E9:31:2E:15:72:2A:26:F9:A6:30:D3:6E:E2:A9:47:9B:AF:A7:83:02:61:AD:E2:B1:1B:41:E8:01"]
+    (OUT / ".well-known").mkdir(exist_ok=True)
+    (OUT / ".well-known" / "assetlinks.json").write_text(json.dumps([{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {"namespace": "android_app", "package_name": "com.cheongyakkok.app", "sha256_cert_fingerprints": APP_SHA256}}], indent=1), encoding="utf-8")
     write_pwa()
     # 네이버 블로그 청약 글(blogpost.py)용 데이터 — 사이트와 같은 값으로 글을 쓰게
     blog = []

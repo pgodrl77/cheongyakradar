@@ -3,3 +3,9 @@ __pycache__/
 build.log
 build.err
 data/rtms_cache/
+
+app/pkg/
+app/*.zip
+app/*.aab
+app/*.apk
+app/twa_*.txt
