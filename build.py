@@ -1232,7 +1232,9 @@ def main():
     sm += [f"<url><loc>{SITE_URL}/{u}</loc><lastmod>{TODAY.isoformat()}</lastmod></url>" for u in urls]
     sm.append("</urlset>")
     (OUT / "sitemap.xml").write_text("\n".join(sm), encoding="utf-8")
-    (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
+    # 다음(Daum) 웹마스터도구 소유 확인(2026-10-11 발급) — robots.txt 하단에 있어야 함
+    daum = "#DaumWebMasterTool:7326a686c977643e4f73531775a435401466ba28dea1c4eddda05fb6f9c1e45a:zgfNBpWN9qxCw+eDaoF1MQ=="
+    (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n\n{daum}\n", encoding="utf-8")
     (OUT / ".nojekyll").write_text("", encoding="utf-8")
     import feeds, indexnow
     (OUT / "rss.xml").write_text(feeds.rss(items, SITE_URL, SITE_NAME, d, short_addr), encoding="utf-8")
