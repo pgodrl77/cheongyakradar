@@ -12,3 +12,7 @@ app/twa_*.txt
 clips/*.mp4
 clips/_work-*/
 clip_log.txt
+
+clips/cy_naver_state.json
+clips/*.png
+clips/cy_clip_log.txt
