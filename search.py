@@ -44,7 +44,7 @@ CSS = """
 
 def bar(up):
     return (f'<div class="wrap"><div class="srch" id="sf"><form action="{up}search.html" role="search">'
-            '<input id="q" name="q" type="search" placeholder="단지명·지역으로 찾기 (예: 부천, 롯데캐슬)" autocomplete="off" aria-label="청약 단지 검색">'
+            '<input id="q" name="q" type="search" placeholder="단지명·지역으로 찾기" autocomplete="off" aria-label="청약 단지 검색">'
             '<button type="submit">검색</button></form><div id="sres" class="sres" hidden></div></div></div>')
 
 
