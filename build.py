@@ -1197,7 +1197,7 @@ try{var s=localStorage.getItem(k);if(s)i.value=s}catch(e){}i.addEventListener('i
 
 def myscore_box(up=""):
     return (f'<div class="myscore"><label for="my"><b>내 가점</b></label><input id="my" type="number" inputmode="numeric" min="0" max="84" placeholder="예: 52">'
-            f'<span class="small muted">점 · 모르면 <a href="{up}calc.html">가점 계산기</a></span></div><p class="small" id="myout" style="margin:0 0 10px"></p>')
+            f'<span class="small muted">점</span><a class="small" href="{up}calc.html" style="margin-left:6px">내 점수 모르면 가점 계산기 →</a></div><p class="small" id="myout" style="margin:0 0 10px"></p>')
 
 
 def rate_rows(items):
