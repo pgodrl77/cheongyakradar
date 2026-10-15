@@ -41,7 +41,7 @@ def build(today, page, esc, ad_slot, site_name, aff_html=None, cpa_html=None):
     y1, y2 = months[0][0], months[-1][0]
     yr = f"{y1}" if y1 == y2 else f"{y1}·{y2}"
     body = f"""
-<p class="small muted"><a href="index.html">청약 일정</a> › 이사 날짜</p>
+<p class="small muted"><a href="/">청약 일정</a> › 이사 날짜</p>
 <h1>손 없는 날 달력 {yr} — 이사·입주 길일 한눈에</h1>
 <p class="lead">손 없는 날은 음력으로 끝자리가 9·0인 날(9·10·19·20·29·30일)입니다. 한 달에 6일 안팎이라 이삿짐센터 예약이 몰리고 요금도 오르는 편이니, 입주 날짜가 정해졌다면 일찍 예약하는 것이 좋습니다.</p>
 <h2>가장 가까운 손 없는 날</h2>

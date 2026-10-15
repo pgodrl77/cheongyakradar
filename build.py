@@ -460,8 +460,8 @@ def page(title, desc, body, path, extra_head=""):
 </head>
 <body>
 <header><div class="wrap hd">
-<a class="logo" href="{up}index.html">{LOGO}{SITE_NAME}</a>
-<nav aria-label="주 메뉴"><a href="{up}index.html">청약 일정</a><a href="{up}week.html">이번 주</a><a href="{up}jupjup.html">줍줍</a><a href="{up}calendar.html">청약 달력</a><a href="{up}rate.html">경쟁률</a><a href="{up}price.html">분양가</a><a href="{up}tools.html">계산기</a><a href="{up}guide/index.html">청약 가이드</a></nav>
+<a class="logo" href="/">{LOGO}{SITE_NAME}</a>
+<nav aria-label="주 메뉴"><a href="/">청약 일정</a><a href="{up}week.html">이번 주</a><a href="{up}jupjup.html">줍줍</a><a href="{up}calendar.html">청약 달력</a><a href="{up}rate.html">경쟁률</a><a href="{up}price.html">분양가</a><a href="{up}tools.html">계산기</a><a href="{up}guide/index.html">청약 가이드</a></nav>
 </div></header>
 <div class="bar"><div class="wrap barin"><span><b>업데이트</b> {TODAY:%Y.%m.%d} 기준 청약홈 분양정보 반영</span><button type="button" id="inst" class="inst" hidden>홈 화면에 앱 설치</button></div></div>
 <div id="ios" class="ios" hidden><div class="wrap">아이폰은 Safari 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 쓸 수 있어요. <button type="button" id="iosx" aria-label="닫기">닫기</button></div></div>
@@ -725,7 +725,7 @@ def build_detail(it, items):
     if hp.startswith("http"):
         links.append(f'<a href="{esc(hp)}" rel="nofollow noopener" target="_blank">분양 홈페이지</a>')
     body = f"""
-<p class="small muted"><a href="../index.html">청약 일정</a> › {esc(it['region'])}</p>
+<p class="small muted"><a href="/">청약 일정</a> › {esc(it['region'])}</p>
 <h1>{esc(name)} 청약 일정·분양가 <span class="b b-{cls}" style="vertical-align:middle">{esc(lab)}</span></h1>
 <p class="lead">{esc(short_addr(r.get('HSSPLY_ADRES')))} · {esc(it['kind'])} · 공고일 {fmt_full(r.get('RCRIT_PBLANC_DE'))}</p>
 <p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 청약홈 공고·경쟁률 자동 반영</p>
@@ -955,7 +955,7 @@ def build_jupjup(items):
         hot_txt = "<p>최근 마감된 줍줍 중 경쟁이 가장 치열했던 곳은 " + ", ".join(
             f'<a href="apt/{x["slug"]}.html">{esc(x["d"].get("HOUSE_NM"))}</a>({cmp_summary(x)["rate"]:.1f} : 1)' for x in hot) + "입니다.</p>"
     body = f"""
-<p class="small muted"><a href="index.html">청약 일정</a> › 무순위 줍줍</p>
+<p class="small muted"><a href="/">청약 일정</a> › 무순위 줍줍</p>
 <h1>무순위 청약(줍줍) 일정 — 잔여세대·임의공급 공고 모음</h1>
 <p class="lead">계약 포기·부적격으로 남은 집을 다시 뽑는 무순위(잔여세대)와 임의공급 공고만 모았습니다. 지금 접수 중이거나 곧 접수하는 곳이 {len(live)}곳입니다. 청약통장이 없어도 되지만, 접수가 하루 이틀로 짧으니 일정부터 확인하세요.</p>
 <p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 매일 아침 청약홈 공고 반영</p>
@@ -995,7 +995,7 @@ def build_public(rows):
         f'<td>{esc(g(x, "CNP_CD_NM") or "-")}</td><td>{dd(g(x, "PAN_NT_ST_DT", "PAN_DT"))}</td><td>{dd(g(x, "CLSG_DT"))}</td><td><span class="b b-wait">{esc(g(x, "PAN_SS") or "-")}</span></td></tr>'
         for x in open_rows[:150])
     body = f"""
-<p class="small muted"><a href="index.html">청약 일정</a> › LH 공공분양·임대</p>
+<p class="small muted"><a href="/">청약 일정</a> › LH 공공분양·임대</p>
 <h1>LH 공공분양·임대 공고 모음 — 청약홈에 없는 공고까지</h1>
 <p class="lead">행복주택·국민임대·공공분양 등 LH(한국토지주택공사) 청약센터 공고 {len(open_rows)}건을 모았습니다. 공고명을 누르면 LH 청약플러스 원문으로 이동합니다.</p>
 <p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 매일 아침 갱신 · 서울 SH 공고는 <a href="https://www.i-sh.co.kr" rel="nofollow noopener" target="_blank">SH 인터넷청약</a>, 경기 GH 공고는 <a href="https://apply.gh.or.kr" rel="nofollow noopener" target="_blank">GH 청약센터</a>에서 확인하세요.</p>
@@ -1039,7 +1039,7 @@ def build_week(items):
     if big:
         big_txt = "이번 주 접수 단지 중 공급이 많은 곳은 " + ", ".join(f'<a href="apt/{x["slug"]}.html">{esc(x["d"].get("HOUSE_NM"))}</a>({esc(x["d"].get("TOT_SUPLY_HSHLDCO"))}세대)' for x in big) + "입니다."
     body = f"""
-<p class="small muted"><a href="index.html">청약 일정</a> › 이번 주</p>
+<p class="small muted"><a href="/">청약 일정</a> › 이번 주</p>
 <h1>이번 주 청약 일정 ({r1}) — 특별공급·1순위·당첨 발표</h1>
 <p class="lead">이번 주에 잡힌 청약 일정 {n1}건을 날짜순으로 정리했습니다. {big_txt}</p>
 <p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 매일 아침 자동 갱신 · 무순위만 보려면 <a href="jupjup.html">줍줍 일정</a></p>
@@ -1128,7 +1128,7 @@ def build_guides():
         extra_aff = ('<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>' + aff_html("guide-" + g["slug"])) if g["slug"] == "dongho" else ""
         glance = ("<h2>한눈에 보기</h2>" + kv([(k, esc(v)) for k, v in ex["glance"]])) if ex.get("glance") else ""
         fb, ld = faq_block([(q, esc(a)) for q, a in ex.get("faq", [])])
-        body = (f'<p class="small muted"><a href="../index.html">청약 일정</a> › <a href="index.html">청약 가이드</a></p><h1>{esc(g["title"])}</h1>'
+        body = (f'<p class="small muted"><a href="/">청약 일정</a> › <a href="index.html">청약 가이드</a></p><h1>{esc(g["title"])}</h1>'
                 f'<p class="small muted">최종 업데이트 {guides.CHECKED} · 제도 변경 시 수정</p>{glance}{g["body"]}{fb}{guides.SRC}{ad_slot()}{extra_aff}<h2>다른 가이드</h2><ul>{others}</ul>')
         out.append((f"guide/{g['slug']}.html", page(f"{g['title']} | {SITE_NAME}", g["desc"], body, f"guide/{g['slug']}.html", ld)))
     return out
@@ -1255,7 +1255,7 @@ def build_rate(items):
     if low:
         low_txt = "최근 공고 중 최저 당첨 가점이 가장 낮았던 곳은 " + ", ".join(f'<a href="apt/{x["it"]["slug"]}.html">{esc(x["it"]["d"].get("HOUSE_NM"))}</a> {area_label(x["ty"])}({x["min"]:g}점)' for x in low) + "입니다."
     body = f"""
-<p class="small muted"><a href="index.html">청약 일정</a> › 경쟁률·커트라인</p>
+<p class="small muted"><a href="/">청약 일정</a> › 경쟁률·커트라인</p>
 <h1>단지별 청약 경쟁률·당첨 가점 커트라인</h1>
 <p class="lead">최근 {LOOKBACK_DAYS}일 동안 결과가 나온 아파트 {n_apts}곳의 주택형별 1순위 경쟁률과 최저·평균·최고 당첨 가점입니다. 내 가점을 넣으면 당첨권(최저 가점 이상)인 주택형이 초록색으로 표시됩니다. {low_txt}</p>
 <p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 청약홈 당첨 가점 공개 자료 기준</p>
@@ -1302,7 +1302,7 @@ def build_price(items):
     top = apts[0] if apts else None
     lead_extra = f' 가장 비싼 곳은 <a href="apt/{top["slug"]}.html">{esc(top["d"].get("HOUSE_NM"))}</a>(평당 {top["ppp"]:,}만원)입니다.' if top else ""
     body = f"""
-<p class="small muted"><a href="index.html">청약 일정</a> › 평당 분양가</p>
+<p class="small muted"><a href="/">청약 일정</a> › 평당 분양가</p>
 <h1>평당 분양가 랭킹 — 최근 분양 아파트 {len(apts)}곳</h1>
 <p class="lead">최근 {LOOKBACK_DAYS}일 동안 공고된 아파트의 평당(3.3㎡) 분양가를 높은 순으로 정리했습니다. 주택형별 최고 분양가를 공급면적으로 나눈 평균값입니다.{lead_extra}</p>
 <p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 지역 평균 대비는 같은 시·도 아파트 평균과 비교</p>
