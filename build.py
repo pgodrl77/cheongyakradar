@@ -1175,25 +1175,43 @@ def build_contact():
     return page(f"문의 | {SITE_NAME}", f"{SITE_NAME} 문의·오류 제보", body, "contact.html")
 
 
+GUIDE_GROUPS = [
+    ("넣기 전에", ["first-priority", "gajeom", "bankbook-deduction", "musunwi", "dongho"]),
+    ("특별공급", ["newborn", "newlywed", "first-home", "multi-child"]),
+    ("당첨된 다음", ["contract", "jungdogeum-loan", "resale-ban", "residence-duty", "ineligible", "give-up"]),
+]
+# 요약표는 숫자 기준표가 본문의 중심인 글에만 맨 위에 둔다(모든 글이 같은 틀로 보이지 않게, 2026-10-17)
+GLANCE_TOP = {"first-priority", "gajeom", "resale-ban", "bankbook-deduction"}
+
+
 def build_guides():
     import guides
+    have = {g["slug"]: g for g in guides.GUIDES}
     out = []
-    links = "".join(f'<a class="card" href="{g["slug"]}.html"><b style="display:block;margin-bottom:6px">{esc(g["short"])}</b><span class="small muted">{esc(g["desc"])}</span></a>' for g in guides.GUIDES)
+    groups = ""
+    for title, slugs in GUIDE_GROUPS:
+        xs = [have[s] for s in slugs if s in have]
+        groups += f'<h2>{title}</h2><ul class="plain">' + "".join(f'<li><a href="{g["slug"]}.html">{esc(g["title"])}</a></li>' for g in xs) + "</ul>"
+    rest = [g for g in guides.GUIDES if not any(g["slug"] in s for _, s in GUIDE_GROUPS)]
+    if rest:
+        groups += '<h2>그 밖에</h2><ul class="plain">' + "".join(f'<li><a href="{g["slug"]}.html">{esc(g["title"])}</a></li>' for g in rest) + "</ul>"
     idx = f"""<h1>청약 가이드</h1>
-<p class="lead">청약 전에 헷갈리기 쉬운 자격·순위·가점 규칙을 정리했습니다. 기준일을 함께 적어 두었으니 신청 전에는 공고문 원문도 꼭 확인하세요.</p>
-<div class="grid">{links}</div>"""
-    out.append(("guide/index.html", page(f"청약 가이드 - 1순위 조건·무순위 자격·가점 계산 | {SITE_NAME}", "아파트 청약 1순위 조건, 무순위(줍줍) 자격, 가점 계산 방법을 정리한 청약 가이드", idx, "guide/index.html")))
+<p class="lead">자격, 가점, 당첨 뒤 절차까지 {len(guides.GUIDES)}편입니다. 제도가 자주 바뀌어서 글마다 확인한 날짜를 적어 두었습니다.</p>
+{groups}"""
+    out.append(("guide/index.html", page(f"청약 가이드 - 1순위 조건·특별공급 자격·당첨 후 절차 | {SITE_NAME}", "아파트 청약 1순위 조건, 특별공급 자격, 당첨 후 계약·중도금 대출·전매제한까지 다룬 청약 가이드", idx, "guide/index.html")))
     for g in guides.GUIDES:
-        others = "".join(f'<li><a href="{o["slug"]}.html">{esc(o["short"])}</a></li>' for o in guides.GUIDES if o is not g)
+        grp = next((s for _, s in GUIDE_GROUPS if g["slug"] in s), [x["slug"] for x in guides.GUIDES])
+        near = [have[s] for s in grp if s != g["slug"] and s in have][:4]
+        others = " · ".join(f'<a href="{o["slug"]}.html">{esc(o["short"])}</a>' for o in near)
         ex = guides.EXTRA.get(g["slug"], {})
         extra_aff = ('<h2>신축 입주 준비<span class="tag">광고·제휴</span></h2>' + aff_html("guide-" + g["slug"])) if g["slug"] == "dongho" else ""
-        glance = ("<h2>한눈에 보기</h2>" + kv([(k, esc(v)) for k, v in ex["glance"]])) if ex.get("glance") else ""
+        glance = ("<h2>요약</h2>" + kv([(k, esc(v)) for k, v in ex["glance"]])) if ex.get("glance") and g["slug"] in GLANCE_TOP else ""
         fb, ld = faq_block([(q, esc(a)) for q, a in ex.get("faq", [])])
         body = (f'<p class="small muted"><a href="/">청약 일정</a> › <a href="index.html">청약 가이드</a></p><h1>{esc(g["title"])}</h1>'
-                f'<p class="small muted">최종 업데이트 {guides.CHECKED} · 제도 변경 시 수정</p>{glance}{g["body"]}{fb}{guides.SRC}{ad_slot()}{extra_aff}<h2>다른 가이드</h2><ul>{others}</ul>')
+                f'<p class="small muted">{guides.CHECKED} 확인</p>{glance}{g["body"]}{fb}{guides.SRC}{ad_slot()}{extra_aff}'
+                f'<p class="small" style="margin-top:24px">같이 보면 좋은 글: {others} · <a href="index.html">전체</a></p>')
         out.append((f"guide/{g['slug']}.html", page(f"{g['title']} | {SITE_NAME}", g["desc"], body, f"guide/{g['slug']}.html", ld)))
     return out
-
 
 def build_privacy():
     body = f"""<h1>개인정보처리방침</h1>
