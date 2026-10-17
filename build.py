@@ -526,6 +526,24 @@ TABLE_HEAD = ('<div class="tbl"><table><thead><tr><th scope="col">단지명</th>
               '<th scope="col">1순위</th><th scope="col">당첨 발표</th><th scope="col">공급</th><th scope="col">평당 분양가(최고)</th><th scope="col">상태</th></tr></thead><tbody>')
 
 
+def home_guides():
+    """홈 화면 청약 가이드 (2026-10-17): 특별공급 자격 + 당첨 후 절차를 첫 화면에서 바로 열 수 있게."""
+    import guides
+    have = {g["slug"]: g for g in guides.GUIDES}
+    rows = [("특별공급 자격", ["newborn", "newlywed", "first-home", "multi-child"]),
+            ("당첨 후 꼭 알아둘 것", ["contract", "jungdogeum-loan", "resale-ban", "give-up"])]
+    out = ""
+    for title, slugs in rows:
+        picks = [have[s] for s in slugs if s in have]
+        if picks:
+            out += (f'<h3 style="margin:18px 0 8px">{esc(title)}</h3><div class="grid toolgrid">'
+                    + "".join(f'<a class="card" href="guide/{g["slug"]}.html"><b>{esc(g["short"])} →</b><span class="small muted">{esc(g["desc"][:44])}…</span></a>' for g in picks)
+                    + "</div>")
+    if not out:
+        return ""
+    return f'<h2>청약 가이드</h2>{out}<p class="small muted" style="margin-top:8px"><a href="guide/index.html">가이드 {len(guides.GUIDES)}편 전체 보기 →</a></p>'
+
+
 def build_index(items):
     live = [x for x in items if x["status"][0] != "done"]
     done = [x for x in items if x["status"][0] == "done"][:60]
@@ -536,6 +554,7 @@ def build_index(items):
 <h1>이번 주 청약 일정과 분양가, 한 화면에서</h1>
 <p class="lead">청약홈 분양공고를 매일 아침 정리합니다. 지금 접수 중인 단지 {n_open}곳, 접수 예정·발표 대기 단지 {len(live) - n_open}곳이 있습니다. 평당 분양가는 주택형별 최고 공급가를 공급면적으로 나눠 계산했습니다.</p>
 {soon_bar(items, 'apt/')}
+<p class="small" style="margin:-4px 0 14px"><b>청약 가이드</b> · <a href="guide/newborn.html">신생아 특공</a> · <a href="guide/newlywed.html">신혼부부 특공</a> · <a href="guide/first-home.html">생애최초 특공</a> · <a href="guide/contract.html">당첨 후 계약 절차</a> · <a href="guide/jungdogeum-loan.html">중도금 대출</a> · <a href="guide/index.html">전체 보기 →</a></p>
 <div class="pills" role="group" aria-label="지역 선택">{pills}</div>
 <h2 id="live" style="margin-top:8px">접수 중 · 예정 · 발표 대기</h2>
 {TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in live) or '<tr><td colspan="8">현재 진행 중인 공고가 없습니다.</td></tr>'}</tbody></table></div>
@@ -547,6 +566,7 @@ def build_index(items):
 <h2>청약 계산기</h2>
 <div class="grid toolgrid">{''.join(f'<a class="card" href="{u}"><b>{t} →</b><span class="small muted">{dd}</span></a>' for u, t, dd in calcs.TOOLS[:5])}</div>
 <p class="small muted" style="margin-top:8px">모든 계산은 브라우저 안에서만 이루어지며 입력값은 서버로 전송되지 않습니다. <a href="tools.html">계산기 전체 보기 →</a></p>
+{home_guides()}
 <h2>날짜별로 보고 싶다면</h2>
 <div class="card"><p style="margin:0 0 10px">특별공급·1순위 접수일과 당첨자 발표일을 달력 한 장에 모았습니다.</p><a href="calendar.html"><b>청약 달력 열기 →</b></a></div>
 <h2>내 점수로 당첨될 수 있을까?</h2>
