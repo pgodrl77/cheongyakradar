@@ -501,12 +501,13 @@ def fmt_date(x):
     return f"{v:%m.%d}" if v else "-"
 
 
-def row_html(it, link_prefix):
+def row_html(it, link_prefix, star=False):
     r = it["d"]
     cls, lab = it["status"]
     units = r.get("TOT_SUPLY_HSHLDCO")
     ppp = f"{round(it['ppp']):,}만원" if it.get("ppp") else "-"
-    return (f'<tr data-region="{esc(it["region"])}"><td><a href="{link_prefix}{it["slug"]}.html"><b>{esc(r.get("HOUSE_NM"))}</b></a>'
+    star_btn = f'<button type="button" class="star" data-s="{it["slug"]}" data-n="{esc(r.get("HOUSE_NM"))}" aria-label="관심 단지">☆</button>' if star else ""
+    return (f'<tr data-region="{esc(it["region"])}" data-slug="{it["slug"]}"><td>{star_btn}<a href="{link_prefix}{it["slug"]}.html"><b>{esc(r.get("HOUSE_NM"))}</b></a>'
             f'<div class="small muted">{esc(it["kind"])}</div></td>'
             f'<td>{esc(short_addr(r.get("HSSPLY_ADRES")))}</td>'
             f'<td>{fmt_date(r.get("SPSPLY_RCEPT_BGNDE"))}</td>'
@@ -545,40 +546,65 @@ def home_guides():
 
 
 def build_index(items):
+    """홈 (2026-10-17 개편): 길이를 1/3로 줄이고, 머물 이유(관심 단지 ★, 내 가점 당첨권)를 위로 올림.
+    카드+설명문 반복·화살표 남발 같은 '템플릿 티'를 걷어내고 표와 짧은 문장 위주로."""
     live = [x for x in items if x["status"][0] != "done"]
-    done = [x for x in items if x["status"][0] == "done"][:60]
+    done = [x for x in items if x["status"][0] == "done"][:10]
     regions = sorted({x["region"] for x in live})
     pills = '<button type="button" class="on" data-r="">전체</button>' + "".join(f'<button type="button" data-r="{esc(r)}">{esc(r)}</button>' for r in regions)
     n_open = sum(1 for x in live if x["status"][0] == "open")
+    star_rows = "".join(row_html(x, "apt/", True) for x in live) or '<tr><td colspan="8">지금 진행 중인 공고가 없어요.</td></tr>'
+    more = [("week.html", "이번 주 일정"), ("calendar.html", "청약 달력"), ("jupjup.html", "줍줍(무순위)"), ("price.html", "평당가 순위")]
+    if LH_N:
+        more.append(("public.html", "LH 공공분양·임대"))
+    tools = [(u, t) for u, t, _ in calcs.TOOLS[:5]]
+    import guides
+    gl = [(f"guide/{g['slug']}.html", g["short"]) for g in guides.GUIDES if g["slug"] in
+          ("newborn", "newlywed", "first-home", "multi-child", "contract", "jungdogeum-loan", "resale-ban", "give-up")]
+    col = lambda title, xs, tail: (f'<div><h3>{title}</h3><ul class="plain">' + "".join(f'<li><a href="{u}">{esc(n)}</a></li>' for u, n in xs)
+                                   + (f'<li class="muted">{tail}</li>' if tail else "") + "</ul></div>")
     body = f"""
-<h1>이번 주 청약 일정과 분양가, 한 화면에서</h1>
-<p class="lead">청약홈 분양공고를 매일 아침 정리합니다. 지금 접수 중인 단지 {n_open}곳, 접수 예정·발표 대기 단지 {len(live) - n_open}곳이 있습니다. 평당 분양가는 주택형별 최고 공급가를 공급면적으로 나눠 계산했습니다.</p>
+<h1>이번 주 청약</h1>
+<p class="lead">{TODAY.month}월 {TODAY.day}일 기준 접수 중 {n_open}곳, 곧 시작하거나 발표를 기다리는 단지 {len(live) - n_open}곳.</p>
 {soon_bar(items, 'apt/')}
-<p class="small" style="margin:-4px 0 14px"><b>청약 가이드</b> · <a href="guide/newborn.html">신생아 특공</a> · <a href="guide/newlywed.html">신혼부부 특공</a> · <a href="guide/first-home.html">생애최초 특공</a> · <a href="guide/contract.html">당첨 후 계약 절차</a> · <a href="guide/jungdogeum-loan.html">중도금 대출</a> · <a href="guide/index.html">전체 보기 →</a></p>
+<div id="fav" class="fav" hidden><b>★ 관심 단지</b> <span id="favlist"></span></div>
 <div class="pills" role="group" aria-label="지역 선택">{pills}</div>
-<h2 id="live" style="margin-top:8px">접수 중 · 예정 · 발표 대기</h2>
-{TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in live) or '<tr><td colspan="8">현재 진행 중인 공고가 없습니다.</td></tr>'}</tbody></table></div>
+{TABLE_HEAD}{star_rows}</tbody></table></div>
+<p class="small muted">단지 이름 옆 ☆를 누르면 이 화면 맨 위에 모아 둡니다. 이 브라우저에만 저장돼요.</p>
 {ad_slot()}
-<h2 id="done">최근 마감된 청약</h2>
-{TABLE_HEAD}{''.join(row_html(x, 'apt/') for x in done)}</tbody></table></div>
-<div class="grid" style="margin-top:24px"><a class="card" href="week.html"><b style="display:block;margin-bottom:6px">이번 주 청약 일정 →</b><span class="small muted">요일별 특별공급·1순위·당첨 발표</span></a><a class="card" href="jupjup.html"><b style="display:block;margin-bottom:6px">무순위 줍줍 일정 →</b><span class="small muted">잔여세대·임의공급만 모아 보기</span></a><a class="card" href="price.html"><b style="display:block;margin-bottom:6px">평당 분양가 랭킹 →</b><span class="small muted">최근 분양 단지 평당가 순위·시도 평균</span></a>{'<a class="card" href="public.html"><b style="display:block;margin-bottom:6px">LH 공공분양·임대 →</b><span class="small muted">행복주택·국민임대 공고 모음</span></a>' if LH_N else ''}</div>
 {rate_preview(items)}
-<h2>청약 계산기</h2>
-<div class="grid toolgrid">{''.join(f'<a class="card" href="{u}"><b>{t} →</b><span class="small muted">{dd}</span></a>' for u, t, dd in calcs.TOOLS[:5])}</div>
-<p class="small muted" style="margin-top:8px">모든 계산은 브라우저 안에서만 이루어지며 입력값은 서버로 전송되지 않습니다. <a href="tools.html">계산기 전체 보기 →</a></p>
-{home_guides()}
-<h2>날짜별로 보고 싶다면</h2>
-<div class="card"><p style="margin:0 0 10px">특별공급·1순위 접수일과 당첨자 발표일을 달력 한 장에 모았습니다.</p><a href="calendar.html"><b>청약 달력 열기 →</b></a></div>
-<h2>내 점수로 당첨될 수 있을까?</h2>
-<div class="card"><p style="margin:0 0 10px">무주택 기간, 부양가족 수, 청약통장 가입 기간만 고르면 84점 만점 가점을 바로 계산합니다.</p><a href="calc.html"><b>청약 가점 계산기 열기 →</b></a></div>
+<h2 id="done">막 끝난 청약</h2>
+{TABLE_HEAD}{''.join(row_html(x, 'apt/', True) for x in done)}</tbody></table></div>
+<p class="small"><a href="rate.html">지난 청약 결과 더 보기</a></p>
+<div class="cols">{col("일정", more, "")}{col("계산기", tools, '<a href="tools.html">전체</a>')}{col("가이드", gl, f'<a href="guide/index.html">{len(guides.GUIDES)}편 전체</a>')}</div>
 <script>
+(function(){{
+var K='cy_fav',f={{}};try{{f=JSON.parse(localStorage.getItem(K)||'{{}}')}}catch(e){{}}
+function save(){{try{{localStorage.setItem(K,JSON.stringify(f))}}catch(e){{}}}}
+function draw(){{var ks=Object.keys(f),box=document.getElementById('fav'),l=document.getElementById('favlist');
+if(!ks.length){{box.hidden=true;return}}box.hidden=false;
+l.innerHTML=ks.map(function(s){{var row=document.querySelector('tr[data-slug="'+s+'"] .b');return '<a href="apt/'+s+'.html">'+f[s]+'</a>'+(row?' <span class="small muted">'+row.textContent+'</span>':'')}}).join(' · ');
+document.querySelectorAll('.star').forEach(function(b){{var on=!!f[b.dataset.s];b.textContent=on?'★':'☆';b.setAttribute('aria-pressed',on)}})}}
+document.querySelectorAll('.star').forEach(function(b){{b.addEventListener('click',function(){{var s=b.dataset.s;if(f[s])delete f[s];else f[s]=b.dataset.n;save();draw()}})}});
 document.querySelectorAll('.pills button').forEach(function(b){{b.addEventListener('click',function(){{
 document.querySelectorAll('.pills button').forEach(function(x){{x.classList.remove('on')}});b.classList.add('on');var r=b.getAttribute('data-r');
-document.querySelectorAll('#live + .tbl tbody tr').forEach(function(tr){{tr.style.display=(!r||tr.getAttribute('data-region')===r)?'':'none'}});}})}});
+document.querySelectorAll('.pills + .tbl tbody tr').forEach(function(tr){{tr.style.display=(!r||tr.getAttribute('data-region')===r)?'':'none'}})}})}});
+draw();
+}})();
 </script>
 """
     return page(f"{SITE_NAME} - 아파트 청약 일정·분양가·경쟁률 한눈에", "이번 주 아파트 청약 일정, 단지별 분양가와 평당가, 무순위 줍줍 공고, 경쟁률을 매일 정리합니다.", body, "")
 
+HOME_CSS = """
+.star{border:0;background:none;cursor:pointer;font-size:16px;line-height:1;padding:0 6px 0 0;color:#c9a227;vertical-align:-1px}
+.star[aria-pressed=true]{color:#e0a800}
+.fav{margin:10px 0 14px;padding:10px 14px;border-radius:10px;background:#fff8e1;font-size:14px}
+.fav a{font-weight:600}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 28px;margin:36px 0 8px;padding-top:20px;border-top:1px solid #e5e8eb}
+.cols h3{font-size:14px;margin:0 0 8px;color:#4e5968}
+ul.plain{list-style:none;margin:0;padding:0}ul.plain li{margin:0 0 7px;font-size:14px}
+@media(max-width:640px){.cols{grid-template-columns:1fr 1fr}}
+"""
 
 def kv(rows):
     return '<div class="kv">' + "".join(f"<div>{esc(k)}</div><div>{v}</div>" for k, v in rows if v and v != "-") + "</div>"
@@ -671,8 +697,8 @@ def guide_links(cls):
     picks = [have[s] for s in want if s in have][:4]
     if not picks:
         return ""
-    cards = "".join(f'<a class="card" href="../guide/{g["slug"]}.html"><b>{esc(g["short"])}</b><div class="small muted">{esc(g["desc"][:48])}…</div></a>' for g in picks)
-    return f'<h2>{"당첨 후 꼭 알아둘 것" if cls in ("wait", "done") else "청약 넣기 전 확인"}</h2><div class="grid">{cards}</div>'
+    links = " · ".join(f'<a href="../guide/{g["slug"]}.html">{esc(g["short"])}</a>' for g in picks)
+    return f'<p class="small" style="margin:18px 0"><b>{"당첨됐다면" if cls in ("wait", "done") else "넣기 전에"}</b> {links}</p>'
 
 
 def build_detail(it, items):
@@ -1276,8 +1302,8 @@ def rate_preview(items):
     rows = rate_rows(items)[:10]
     if not rows:
         return ""
-    return ("<h2>최근 경쟁률·최저 당첨 가점</h2>" + myscore_box() + RATE_HEAD + "".join(rate_tr(x) for x in rows) + "</tbody></table></div>"
-            '<p style="margin-top:8px"><a href="rate.html"><b>경쟁률·커트라인 전체 보기 →</b></a></p>' + MYSCORE_JS)
+    return ("<h2>내 가점이면 어디까지 됐을까</h2><p class=\"small muted\">최근 단지들의 최저 당첨 가점입니다. 점수를 넣으면 될 뻔한 곳이 초록색으로 바뀝니다.</p>" + myscore_box() + RATE_HEAD + "".join(rate_tr(x) for x in rows) + "</tbody></table></div>"
+            '<p style="margin-top:8px"><a href="rate.html">경쟁률·커트라인 전체</a></p>' + MYSCORE_JS)
 
 
 def build_rate(items):
@@ -1397,7 +1423,7 @@ def main():
     LH_N = len(lh_rows)
     (OUT / "apt").mkdir(parents=True, exist_ok=True)
     (OUT / "assets").mkdir(parents=True, exist_ok=True)
-    (OUT / "assets" / "style.css").write_text(CSS.strip() + calcs.CSS + search.CSS, encoding="utf-8")
+    (OUT / "assets" / "style.css").write_text(CSS.strip() + calcs.CSS + search.CSS + HOME_CSS, encoding="utf-8")
     (OUT / "assets" / "search.js").write_text(search.JS.strip(), encoding="utf-8")
     (OUT / "search.json").write_text(search.index(items, short_addr, fmt_date), encoding="utf-8")
     (OUT / "search.html").write_text(page(f"청약 단지 검색 | {SITE_NAME}", "아파트 청약 단지를 이름·지역으로 검색하세요.", search.PAGE_BODY, "search.html",
