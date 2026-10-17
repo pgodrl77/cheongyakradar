@@ -642,6 +642,19 @@ def aff_html(slug, n=4):
     return (f'<div class="grid">{cards}</div>'
             '<p class="small muted" style="margin-top:8px">이 게시물은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다. 가격은 변동될 수 있습니다.</p>')
 
+def guide_links(cls):
+    """단지 단계에 맞는 가이드 연결 (2026-10-17): 접수 전·중이면 자격, 발표 후면 계약·대출·전매."""
+    import guides
+    have = {g["slug"]: g for g in guides.GUIDES}
+    want = (["contract", "jungdogeum-loan", "ineligible", "resale-ban", "give-up"] if cls in ("wait", "done")
+            else ["first-priority", "gajeom", "newlywed", "first-home", "newborn", "multi-child"])
+    picks = [have[s] for s in want if s in have][:4]
+    if not picks:
+        return ""
+    cards = "".join(f'<a class="card" href="../guide/{g["slug"]}.html"><b>{esc(g["short"])}</b><div class="small muted">{esc(g["desc"][:48])}…</div></a>' for g in picks)
+    return f'<h2>{"당첨 후 꼭 알아둘 것" if cls in ("wait", "done") else "청약 넣기 전 확인"}</h2><div class="grid">{cards}</div>'
+
+
 def build_detail(it, items):
     r = it["d"]
     name = r.get("HOUSE_NM") or "단지"
@@ -730,6 +743,7 @@ def build_detail(it, items):
 <p class="lead">{esc(short_addr(r.get('HSSPLY_ADRES')))} · {esc(it['kind'])} · 공고일 {fmt_full(r.get('RCRIT_PBLANC_DE'))}</p>
 <p class="small muted">최종 업데이트 {TODAY:%Y.%m.%d} · 청약홈 공고·경쟁률 자동 반영</p>
 <h2>한눈에 보기</h2>{glance_html(it)}
+{'' if stable else '<p class="small">내 가점으로 될까? <a href="../calc.html">가점 계산기</a>로 점수를 내고 <a href="../rate.html">최근 단지 당첨 커트라인</a>과 비교해 보세요.</p>'}
 {res_html}
 <h2>청약 일정</h2>{kv(sched)}
 {cal_block(it) if events(it) else ''}
@@ -739,6 +753,7 @@ def build_detail(it, items):
 {fund_block(it)}
 <h2>한눈에 보는 분석</h2><div class="note">{'<br>'.join(analysis) or '분석할 주택형 정보가 아직 없습니다.'}</div>
 {move_in}
+{guide_links(cls)}
 {ad_slot()}
 <h2>원문 확인</h2><p>{' · '.join(links) or '청약홈(applyhome.co.kr)에서 단지명으로 검색해 공고 원문을 확인하세요.'}</p>
 {faq_html}
@@ -1391,7 +1406,7 @@ def main():
     if lh_rows:
         (OUT / "public.html").write_text(build_public(lh_rows), encoding="utf-8")
         extra.append("public.html")
-    urls = extra + ["", "week.html", "jupjup.html", "calendar.html", "calc.html", "move.html", "about.html", "contact.html",
+    urls = extra + ["", "week.html", "jupjup.html", "calendar.html", "calc.html", "move.html", "about.html", "contact.html", "privacy.html",
                      "rate.html", "price.html", "tools.html", "tax.html", "dsr.html", "interest.html", "bankbook.html", "terms.html"]
     for path, htmltxt in build_guides():
         (OUT / path).write_text(htmltxt, encoding="utf-8")
@@ -1410,6 +1425,11 @@ def main():
     (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n\n{daum}\n", encoding="utf-8")
     (OUT / ".nojekyll").write_text("", encoding="utf-8")
     import feeds, indexnow
+    try:  # 발표일 쓰레드 원고 (실패해도 사이트 갱신은 계속)
+        import threads_queue
+        threads_queue.write(threads_queue.make(items, TODAY, d, SITE_URL, cmp_summary, short_addr), TODAY, OUT, pathlib.Path(__file__).parent)
+    except Exception as e:
+        print("쓰레드 원고 실패:", e, flush=True)
     (OUT / "rss.xml").write_text(feeds.rss(items, SITE_URL, SITE_NAME, d, short_addr), encoding="utf-8")
     try:
         feeds.og_image(OUT / "og.png")

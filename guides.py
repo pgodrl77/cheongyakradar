@@ -166,3 +166,12 @@ EXTRA = {
                 ("로열층은 몇 층인가요?", "보통 전체 층수의 3분의 1에서 3분의 2 사이 높이를 말하며 일조·조망·소음의 균형이 좋습니다.")],
     },
 }
+
+
+# ── 2026-10-17 추가: 특별공급 4편(guides_partA) + 당첨 후 절차 7편(guides_partB) ──
+# 웹 출처 2곳 이상으로 교차 확인한 수치만 넣고, 확인 못 한 금액·비율은 "공고 확인"으로 안내했다.
+from guides_partA import GUIDES_A, EXTRA_A  # noqa: E402
+from guides_partB import GUIDES_B, EXTRA_B  # noqa: E402
+GUIDES += GUIDES_A + GUIDES_B
+EXTRA.update(EXTRA_A)
+EXTRA.update(EXTRA_B)
