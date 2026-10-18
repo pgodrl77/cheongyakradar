@@ -42,6 +42,13 @@ def foot():
             '<p>일정은 공고 정정으로 바뀔 수 있으니, 청약 전에는 청약홈 입주자모집공고 원문을 꼭 확인하세요.</p>')
 
 
+def calcbox():
+    # 2026-10-18 주 3회 결정형 개편: 첫 문단 바로 뒤 "내 숫자로 계산" 버튼(청약콕 가점 계산기)
+    return ('<p><b>내 숫자로 바로 계산해 보기</b><br>'
+            '<a href="https://cheongyakkok.com/calc.html" target="_blank">청약 가점 계산기 — 무주택 기간·부양가족·통장 기간 넣고 내 가점 1분 확인</a><br>'
+            '단지 이름을 눌러 나오는 청약콕 단지 페이지의 경쟁률·당첨 가점 결과와 비교하면 넣어 볼 만한 곳인지 판단하기 쉬워요.</p>')
+
+
 def weekly(items, today):
     mon = today - dt.timedelta(days=today.weekday())
     sun = mon + dt.timedelta(days=6)
@@ -65,7 +72,7 @@ def weekly(items, today):
     h = [f'<p>이번 주({md(mon)}~{md(sun)})에 청약 접수를 받는 곳은 <b>{len(rows)}곳</b>이에요. '
          f'일반 분양 아파트가 {len(apt)}곳이고, 나머지는 무순위·잔여세대 같은 줍줍 물량입니다. '
          f'공급 세대가 가장 많은 곳은 {link(big)}({e(big["a"])}, 총 {e(big.get("hh"))}세대)예요.</p>',
-         f'<p>작성일 {today.isoformat()}</p>',
+         calcbox(), f'<p>작성일 {today.isoformat()}</p>',
          '<h3>이번 주 청약 접수 단지</h3>',
          '<table><tr><th>접수 시작</th><th>단지</th><th>지역</th><th>유형</th><th>세대수</th><th>평당 분양가</th></tr>']
     for v, x in rows:
@@ -98,7 +105,7 @@ def picks(items, today):
     names = ", ".join(c[2]["n"] for c in top)
     title = f"다음 주 청약 큰 단지 {len(top)}곳 분양가·입지 정리 ({today.month}월 {today.day}일 기준)"
     h = [f'<p>앞으로 열흘 안에 청약 접수를 시작하는 일반 분양 아파트 가운데 공급 세대가 많은 {len(top)}곳을 골라 '
-         f'분양가와 입지를 숫자로 정리했어요. 대상은 {e(names)}입니다.</p>', f'<p>작성일 {today.isoformat()}</p>']
+         f'분양가와 입지를 숫자로 정리했어요. 대상은 {e(names)}입니다.</p>', calcbox(), f'<p>작성일 {today.isoformat()}</p>']
     for i, (n, start, x) in enumerate(top, 1):
         ev = sorted(evs(x))
         h.append(f'<h3>{i}. {link(x)}</h3>')
