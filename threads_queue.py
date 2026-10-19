@@ -37,14 +37,14 @@ def make(items, today, d, site_url, cmp_summary, short_addr):
             card["rate"] = f"평균 {cs['rate']:.1f} : 1"
         if win == today:
             posts.append({"kind": "winner", "prio": 1, "url": url, "card": card,
-                          "text": f"오늘 {name} 당첨자 발표날입니다.\n\n{place}\n당첨 확인은 청약홈에서, 주택형별 경쟁률과 당첨 가점 커트라인은 정리해 두었어요.\n\n{url}\n\n#청약 #당첨자발표 #{name.replace(' ', '')}"})
+                          "text": f"오늘 {name} 당첨자 발표날입니다.\n\n{place}\n주택형별 경쟁률·당첨 가점 커트라인은 청약콕에 정리해 두었어요.\n👉 프로필 링크에서 단지 이름으로 검색하세요.\n\n{url}\n\n#청약 #당첨자발표 #{name.replace(' ', '')}"})
         elif cs and rnk1_end and 1 <= (today - rnk1_end).days <= 2:
             top = f" 가장 치열한 곳은 {cs['top_ty']} {cs['top_rate']:g}대1." if cs.get("top_rate") else ""
             posts.append({"kind": "result", "prio": 2, "url": url, "card": card,
-                          "text": f"{name} 1순위 결과 나왔습니다.\n\n{cs['sup']:,}세대에 {cs['req']:,}명, 평균 {cs['rate']:.1f}대1.{top}\n\n주택형별 경쟁률·평당 분양가 → {url}\n\n#청약 #청약경쟁률 #{name.replace(' ', '')}"})
+                          "text": f"{name} 1순위 결과 나왔습니다.\n\n{cs['sup']:,}세대에 {cs['req']:,}명, 평균 {cs['rate']:.1f}대1.{top}\n\n주택형별 경쟁률·평당 분양가는 청약콕에서 → {url}\n👉 프로필 링크에서 단지 이름으로 검색하세요.\n\n#청약 #청약경쟁률 #{name.replace(' ', '')}"})
         elif start == today:
             posts.append({"kind": "open", "prio": 3, "url": url, "card": card,
-                          "text": f"오늘부터 {name} 청약 접수 시작입니다.\n\n{place} · {it.get('kind', '')}\n일정·분양가·평당가를 한 페이지에 정리했어요. 내 가점으로 될지 계산기로 확인해 보세요.\n\n{url}\n\n#청약 #청약일정 #{name.replace(' ', '')}"})
+                          "text": f"오늘부터 {name} 청약 접수 시작입니다.\n\n{place} · {it.get('kind', '')}\n일정·분양가·평당가를 한 페이지에 정리했어요. 내 가점으로 될지 청약콕 계산기로 확인해 보세요.\n👉 프로필 링크에서 단지 이름으로 검색하세요.\n\n{url}\n\n#청약 #청약일정 #{name.replace(' ', '')}"})
     posts.sort(key=lambda p: p["prio"])
     return posts[:MAX_POSTS]
 
