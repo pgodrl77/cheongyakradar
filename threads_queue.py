@@ -129,6 +129,17 @@ def write(posts, today, out_site, root):
             p["image"] = f"{base}/cards/{fn}"
         except Exception as e:  # 카드가 없어도 쓰레드·페이스북 게시는 된다
             print("카드 이미지 실패:", e, flush=True)
+        # 2026-10-19 사용자 지시 "혜택 한 장처럼 카드 뉴스를 만들어서 게시" — 15초 카드뉴스 릴스(인스타 릴스·틱톡용)
+        try:
+            import reel
+            slug = p["url"].split("/apt/")[1].rsplit(".html", 1)[0]
+            vn = f"{today.isoformat()}-{i}.mp4"
+            reel.make(slug, p["kind"], cards / vn, today, out_site)
+            base = p["url"].split("/apt/")[0]
+            p["video"] = f"{base}/cards/{vn}"
+            p["cover"] = f"{base}/cards/{vn[:-4]}.jpg"
+        except Exception as e:  # 릴스가 없으면 예약 작업이 카드 이미지로 게시한다
+            print("릴스 실패:", e, flush=True)
     feed = {"date": today.isoformat(), "posts": posts}
     (out_site / "feeds").mkdir(parents=True, exist_ok=True)
     (out_site / "feeds" / "threads.json").write_text(json.dumps(feed, ensure_ascii=False, indent=1), encoding="utf-8")
