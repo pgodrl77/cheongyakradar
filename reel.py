@@ -1,7 +1,9 @@
 """청약콕 카드뉴스 릴스 (2026-10-19, 사용자 지시 "혜택 한 장처럼 카드 뉴스를 만들어서 게시").
 
-혜택 한 장 릴스와 같은 형식: 1080x1920 · 15초 · 장면 4개(표지 → 분양가 → 일정/경쟁률 → 행동 유도),
-장면마다 제목이 먼저 뜨고 내용이 이어서 나타나며, 위쪽 진행 막대가 차오른다. 배경음 static/reel_bgm.m4a.
+혜택 한 장 릴스와 같은 형식: 1080x1920 · 15초 · 장면 4개(표지 → 분양가 → 일정/가점 → 청약콕 유입),
+장면 안 글자·줄이 하나씩 올라오고, 분양가 막대가 차오르고, 큰 숫자는 0부터 세어 올라간다(30fps 프레임 렌더).
+위쪽 진행 막대, 배경 빛 번짐이 계속 움직여 정지 화면이 없다. 배경음 static/reel_bgm.m4a.
+2026-10-19 사용자 지적 "왜 청약홈이야?" — 마지막 장면은 청약콕 주소·프로필 링크만 내세우고, 청약홈은 출처 줄에만 둔다.
 
 원료는 이미 만든 단지 페이지(site/apt/<slug>.html)의 숫자만 쓴다 — 페이지에 없는 숫자는 만들지 않는다.
 사용: python reel.py <slug> <winner|result|open> <출력.mp4> [YYYY-MM-DD]
@@ -10,12 +12,13 @@
 import datetime as dt, html, json, pathlib, re, shutil, subprocess, sys, tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent
-W, H = 1080, 1920
+W, H, FPS, T = 1080, 1920, 30, 15.0
 BGM = ROOT / "static" / "reel_bgm.m4a"
 FONT = "'Pretendard','Noto Sans KR','Malgun Gothic','맑은 고딕',sans-serif"
 C = dict(bg="#F2F6FE", fg="#0E1B38", blue="#1D63DB", soft="#5B6B8C", card="#FFFFFF", line="#D9E3F5", hot="#E8590C")
 KIND_LABEL = {"winner": "오늘 당첨자 발표", "result": "1순위 경쟁률 결과", "open": "오늘 청약 접수 시작"}
 WD = "월화수목금토일"
+SCENES = [(0.0, 3.6), (3.6, 7.6), (7.6, 11.4), (11.4, T)]
 
 
 # ---------------- 단지 페이지 읽기 ----------------
@@ -73,7 +76,6 @@ def parse(path):
 
 
 def short_ty(s):
-    # "85㎡ 084.9800A" → "85㎡ A",  "107㎡ 106.9500A" → "107㎡ A", "103㎡ 102.8500" → "103㎡"
     m = re.match(r"(\d+㎡)\s*[\d.]*([A-Z]*)", s)
     return (m.group(1) + (" " + m.group(2) if m and m.group(2) else "")) if m else s
 
@@ -86,197 +88,220 @@ def man(v):
     return int(m.group(1) or 0) * 10000 + int((m.group(2) or "0").replace(",", ""))
 
 
-def md(s, today=None):
-    """'2026.10.19' → '10월 19일(월)'"""
+def md(s):
     m = re.search(r"(\d{4})\.(\d{2})\.(\d{2})", s)
     if not m:
-        return s
+        return s, None
     day = dt.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
     return f"{day.month}월 {day.day}일({WD[day.weekday()]})", day
-
-
-# ---------------- 장면 HTML ----------------
-CSS = f"""
-*{{margin:0;padding:0;box-sizing:border-box}}
-html,body{{width:{W}px;height:{H}px}}
-body{{font-family:{FONT};background:{C['bg']};color:{C['fg']};position:relative;overflow:hidden;word-break:keep-all;letter-spacing:-0.03em}}
-.glow{{position:absolute;right:-220px;top:-260px;width:760px;height:760px;border-radius:50%;
- background:radial-gradient(circle,rgba(29,99,219,.22),rgba(29,99,219,0) 68%)}}
-.top{{position:absolute;left:72px;right:72px;top:70px;display:flex;align-items:center;gap:18px;font-size:30px;font-weight:700;color:{C['soft']}}}
-.chipb{{background:{C['blue']};color:#fff;font-weight:900;padding:8px 18px;border-radius:10px}}
-.track{{position:absolute;left:72px;right:72px;top:132px;height:8px;border-radius:4px;background:{C['line']}}}
-.k{{display:inline-block;background:{C['fg']};color:#fff;font-size:34px;font-weight:800;padding:12px 24px;border-radius:12px}}
-.k.b{{background:{C['blue']}}}
-.title{{font-size:104px;line-height:1.16;font-weight:900;margin-top:34px}}
-.sub{{font-size:44px;line-height:1.45;font-weight:600;color:{C['soft']};margin-top:30px}}
-.big{{font-size:150px;font-weight:900;color:{C['blue']};line-height:1;margin-top:70px}}
-.big small{{font-size:64px;color:{C['fg']};margin-left:12px}}
-.note{{font-size:36px;line-height:1.5;color:{C['soft']};margin-top:28px;font-weight:600}}
-.wrap{{position:absolute;left:72px;right:72px;top:380px}}
-.rows{{display:flex;flex-direction:column;gap:26px;margin-top:56px}}
-.row{{background:{C['card']};border-radius:26px;padding:30px 38px;box-shadow:0 6px 24px rgba(14,27,56,.07)}}
-.row .l{{display:flex;justify-content:space-between;align-items:baseline;font-size:46px;font-weight:800}}
-.row .l span:last-child{{color:{C['blue']}}}
-.bar{{height:18px;border-radius:9px;background:{C['line']};margin-top:18px;overflow:hidden}}
-.bar i{{display:block;height:100%;background:{C['fg']};border-radius:9px}}
-.row.hot{{outline:5px solid {C['blue']}}}
-.row.hot .l span:first-child::after{{content:' 오늘';color:#fff;background:{C['hot']};font-size:30px;padding:4px 12px;border-radius:8px;margin-left:14px;vertical-align:middle}}
-.cta{{position:absolute;left:72px;right:72px;bottom:250px;background:{C['fg']};color:#fff;border-radius:30px;padding:44px 40px;text-align:center}}
-.cta b{{display:block;font-size:52px;font-weight:900}}
-.cta span{{display:block;font-size:34px;color:#C9D6EE;margin-top:12px}}
-.foot{{position:absolute;left:72px;right:72px;bottom:120px;font-size:28px;color:{C['soft']};line-height:1.5}}
-.hide{{visibility:hidden}}
-"""
-
-
-def frame(inner, foot=""):
-    return (f"<!doctype html><html><head><meta charset='utf-8'><style>{CSS}</style></head><body>"
-            f"<div class='glow'></div><div class='top'><span class='chipb'>청약콕</span><span>cheongyakkok.com</span></div>"
-            f"<div class='track'></div><div class='wrap'>{inner}</div>{foot}</body></html>")
 
 
 def e(s):
     return html.escape(str(s or ""))
 
 
-def rows_html(items, hide=False):
-    return "<div class='rows%s'>%s</div>" % (" hide" if hide else "", "".join(items))
+# ---------------- 장면 HTML (움직임은 아래 JS R(t) 가 프레임마다 계산) ----------------
+CSS = f"""
+*{{margin:0;padding:0;box-sizing:border-box}}
+html,body{{width:{W}px;height:{H}px}}
+body{{font-family:{FONT};background:{C['bg']};color:{C['fg']};position:relative;overflow:hidden;word-break:keep-all;letter-spacing:-0.03em}}
+#glow{{position:absolute;right:-240px;top:-260px;width:820px;height:820px;border-radius:50%;
+ background:radial-gradient(circle,rgba(29,99,219,.26),rgba(29,99,219,0) 68%)}}
+#glow2{{position:absolute;left:-300px;bottom:-320px;width:760px;height:760px;border-radius:50%;
+ background:radial-gradient(circle,rgba(29,99,219,.12),rgba(29,99,219,0) 70%)}}
+.top{{position:absolute;left:72px;right:72px;top:66px;display:flex;align-items:center;gap:18px;font-size:38px;font-weight:800;color:{C['blue']}}}
+.chipb{{background:{C['blue']};color:#fff;font-weight:900;padding:8px 20px;border-radius:12px}}
+.track{{position:absolute;left:72px;right:72px;top:140px;height:10px;border-radius:5px;background:{C['line']};overflow:hidden}}
+#bar{{height:100%;width:0;background:{C['blue']};border-radius:5px}}
+.scene{{position:absolute;left:72px;right:72px;top:360px;bottom:0;display:none}}
+.k{{display:inline-block;background:{C['fg']};color:#fff;font-size:36px;font-weight:800;padding:12px 26px;border-radius:14px}}
+.k.b{{background:{C['blue']}}}
+.title{{font-size:106px;line-height:1.16;font-weight:900;margin-top:34px}}
+.h2{{font-size:90px;line-height:1.16;font-weight:900;margin-top:30px}}
+.sub{{font-size:46px;line-height:1.45;font-weight:600;color:{C['soft']};margin-top:30px}}
+.big{{font-size:170px;font-weight:900;color:{C['blue']};line-height:1;margin-top:80px;transform-origin:left bottom}}
+.big small{{font-size:68px;color:{C['fg']};margin-left:12px}}
+.note{{font-size:38px;line-height:1.5;color:{C['soft']};margin-top:30px;font-weight:600}}
+.rows{{display:flex;flex-direction:column;gap:26px;margin-top:56px}}
+.row{{background:{C['card']};border-radius:26px;padding:32px 40px;box-shadow:0 6px 24px rgba(14,27,56,.07)}}
+.row .l{{display:flex;justify-content:space-between;align-items:baseline;font-size:48px;font-weight:800}}
+.row .l>span:last-child{{color:{C['blue']}}}
+.barw{{height:20px;border-radius:10px;background:{C['line']};margin-top:18px;overflow:hidden}}
+.barw i{{display:block;height:100%;width:0;background:{C['fg']};border-radius:10px}}
+.row.hot{{outline:6px solid {C['blue']}}}
+.tag{{color:#fff;background:{C['hot']};font-size:30px;padding:4px 12px;border-radius:8px;margin-left:14px;vertical-align:middle}}
+.url{{margin-top:70px;background:{C['blue']};color:#fff;border-radius:34px;padding:50px 40px;text-align:center}}
+.url b{{display:block;font-size:84px;font-weight:900;letter-spacing:-0.02em}}
+.url span{{display:block;font-size:40px;margin-top:16px;color:#DCE7FF;font-weight:700}}
+.save{{margin-top:40px;font-size:42px;font-weight:800;text-align:center}}
+.foot{{position:absolute;left:72px;right:72px;bottom:110px;font-size:28px;color:{C['soft']};line-height:1.5}}
+"""
+
+JS = """
+const T=%(T)s;
+function ez(x){x=Math.min(1,Math.max(0,x));return 1-Math.pow(1-x,3)}
+function R(t){
+  document.querySelectorAll('.scene').forEach(s=>{const a=+s.dataset.s,b=+s.dataset.e;
+    let o=(t<a||t>b)?0:Math.min(1,(t-a)/0.3,(b>=T-0.01)?1:(b-t)/0.3);
+    s.style.display=o>0?'block':'none';s.style.opacity=o;});
+  document.querySelectorAll('[data-t]').forEach(el=>{const p=ez((t-(+el.dataset.t))/0.55),fx=el.dataset.fx||'up';
+    if(fx==='up'){el.style.opacity=p;el.style.transform='translateY('+((1-p)*70)+'px)';}
+    else if(fx==='left'){el.style.opacity=p;el.style.transform='translateX('+((1-p)*-90)+'px)';}
+    else if(fx==='pop'){el.style.opacity=p;el.style.transform='scale('+(0.55+0.45*p)+')';}
+    else if(fx==='grow'){el.style.width=(ez((t-(+el.dataset.t))/0.9)*(+el.dataset.w))+'%';}
+    else if(fx==='count'){const q=ez((t-(+el.dataset.t))/1.1),v=+el.dataset.v,dc=+(el.dataset.dec||0);
+      el.textContent=(v*q).toLocaleString('ko-KR',{minimumFractionDigits:dc,maximumFractionDigits:dc});}
+  });
+  document.querySelectorAll('.breathe').forEach(el=>{if(el.style.opacity==='1'||!el.dataset.t)
+    el.style.transform='scale('+(1+0.025*Math.sin(t*3.2))+')';});
+  document.getElementById('bar').style.width=(t/T*100)+'%';
+  document.getElementById('glow').style.transform='translate('+(Math.sin(t*0.7)*60)+'px,'+(Math.cos(t*0.55)*45)+'px)';
+  document.getElementById('glow2').style.transform='translate('+(Math.cos(t*0.5)*50)+'px,'+(Math.sin(t*0.6)*40)+'px)';
+}
+""".replace("%(T)s", str(T))
 
 
-def price_rows(d):
-    ts = d["types"][:4]
-    vals = [man(t["price"]) or 0 for t in ts]
-    mx = max(vals) if vals else 1
-    out = []
-    for t, v in zip(ts, vals):
-        pct = max(18, round(100 * v / mx)) if mx else 50
-        out.append(f"<div class='row'><div class='l'><span>{e(t['ty'])}</span><span>{e(t['price'])}</span></div>"
-                   f"<div class='bar'><i style='width:{pct}%'></i></div></div>")
-    return out
+def A(t, fx="up", **kw):
+    """움직임 속성: data-t(등장 시각) data-fx(효과)"""
+    extra = "".join(f" data-{k}='{v}'" for k, v in kw.items())
+    return f" data-t='{t:.2f}' data-fx='{fx}'{extra}"
 
 
-def sched_rows(d, today):
-    keep = ("특별공급", "1순위", "2순위", "청약 접수", "당첨자 발표", "계약", "입주")
-    out = []
-    for k, v in d["sched"]:
-        if not k.startswith(keep) or (k == "청약 접수" and any(x.startswith("1순위") for x, _ in d["sched"])):
-            continue
-        r = md(v)
-        label, day = (r if isinstance(r, tuple) else (v, None))
-        if "~" in v and day:
-            label += " ~"
-        hot = " hot" if day == today else ""
-        out.append(f"<div class='row{hot}'><div class='l'><span>{e(k)}</span><span>{e(label)}</span></div></div>")
-    return out[:5]
+def big_count(text, t0):
+    """'1,128' → 0부터 세는 숫자, '9.09' → 소수 둘째자리까지"""
+    raw = text.replace(",", "")
+    try:
+        float(raw)
+    except ValueError:
+        return e(text)
+    dec = len(raw.split(".")[1]) if "." in raw else 0
+    return f"<span{A(t0, 'count', v=raw, dec=dec)}>0</span>"
 
 
-def scenes(d, kind, today):
+def scenes_html(d, kind, today):
     g = d["glance"]
-    name = d["name"]
+    s1, s2, s3, s4 = SCENES
     place = " · ".join(x for x in (d["place"], d["kind"]) if x)
     rng = g.get("분양가(최고가 기준)", "")
     low = rng.split("~")[0].strip() if rng else ""
-    supply = g.get("공급", "")
+    supply = re.sub(r"[^\d,]", "", g.get("공급", ""))
     rate = g.get("경쟁률", "")
     score = g.get("당첨 가점", "")
 
-    # 1. 표지
-    if kind in ("winner", "result") and rate:
-        m = re.match(r"평균 ([\d.]+) : 1", rate)
-        stat = f"{m.group(1)}<small>: 1</small>" if m else e(rate)
-        statnote = "1순위 평균 경쟁률"
-    else:
-        n = re.sub(r"[^\d,]", "", supply)
-        n = f"{int(n.replace(',', '')):,}" if n.replace(",", "").isdigit() else n
-        stat, statnote = (f"{n}<small>세대</small>", f"총 공급 · 분양가 {low}부터" if low else "총 공급") if n else ("", "")
-    cov = (f"<span class='k b'>{e(KIND_LABEL.get(kind, '청약 소식'))}</span>"
-           f"<div class='title'>{e(name)}</div><div class='sub'>{e(place)}</div>")
-    s1a = frame(cov + f"<div class='hide'><div class='big'>{stat}</div></div>")
-    s1b = frame(cov + (f"<div class='big'>{stat}</div><div class='note'>{e(statnote)}</div>" if stat else ""))
+    # 1. 표지 — 단지명이 올라오고, 큰 숫자(경쟁률 또는 세대수)가 0부터 세어 올라감
+    a = s1[0]
+    m = re.match(r"평균 ([\d.]+) : 1", rate) if kind in ("winner", "result") else None
+    stat = unit = note = ""
+    if m:
+        stat, unit, note = m.group(1), ": 1", "1순위 평균 경쟁률"
+    elif supply:
+        stat, unit, note = supply, "세대", (f"총 공급 · 분양가 {low}부터" if low else "총 공급")
+    p1 = (f"<span class='k b'{A(a + .1, 'pop')}>{e(KIND_LABEL.get(kind, '청약 소식'))}</span>"
+          f"<div class='title'{A(a + .35)}>{e(d['name'])}</div><div class='sub'{A(a + .7)}>{e(place)}</div>")
+    if stat:
+        p1 += (f"<div class='big breathe'{A(a + 1.1, 'left')}>{big_count(stat, a + 1.1)}<small>{e(unit)}</small></div>"
+               f"<div class='note'{A(a + 1.5)}>{e(note)}</div>")
 
-    # 2. 분양가
+    # 2. 분양가 — 줄이 하나씩 올라오고 막대가 차오름
+    a = s2[0]
+    ts = d["types"][:4]
+    vals = [man(x["price"]) or 0 for x in ts]
+    mx = max(vals) if vals else 1
+    rows = ""
+    for i, (x, v) in enumerate(zip(ts, vals)):
+        ti = a + .7 + i * .35
+        pct = max(18, round(100 * v / mx)) if mx else 50
+        rows += (f"<div class='row'{A(ti)}><div class='l'><span>{e(x['ty'])}</span><span>{e(x['price'])}</span></div>"
+                 f"<div class='barw'><i{A(ti + .2, 'grow', w=pct)}></i></div></div>")
     py = g.get("평당 분양가", "")
     pnote = " · ".join(x for x in (f"평당 {py}" if py else "", d["region_cmp"]) if x)
-    head2 = "<span class='k'>얼마예요?</span><div class='title' style='font-size:88px'>주택형별<br>최고 분양가</div>"
-    pr = price_rows(d)
-    s2a = frame(head2 + rows_html(pr, True))
-    s2b = frame(head2 + rows_html(pr) + (f"<div class='note'>{e(pnote)}</div>" if pnote else ""))
+    p2 = (f"<span class='k'{A(a + .1, 'pop')}>얼마예요?</span><div class='h2'{A(a + .3)}>주택형별<br>최고 분양가</div>"
+          f"<div class='rows'>{rows}</div>" + (f"<div class='note'{A(a + .9 + len(ts) * .35)}>{e(pnote)}</div>" if pnote else ""))
 
-    # 3. 일정 또는 경쟁률·가점
-    if kind in ("winner", "result") and score:
-        head3 = "<span class='k'>몇 점에 붙었나?</span><div class='title' style='font-size:88px'>당첨 가점<br>커트라인</div>"
-        m = re.match(r"최저 (\d+)점(.*?)(?:· 최고 (\d+)점)?$", score)
-        body3 = (f"<div class='big'>{m.group(1)}<small>점부터</small></div>"
-                 f"<div class='note'>{e(('가장 낮은 당첨 점수' + m.group(2)).strip())}{' · 최고 ' + m.group(3) + '점' if m.group(3) else ''}</div>") if m else f"<div class='sub'>{e(score)}</div>"
+    # 3. 가점 커트라인(있으면) 또는 일정
+    a = s3[0]
+    sm = re.match(r"최저 (\d+)점(.*?)(?:· 최고 (\d+)점)?$", score) if score and kind in ("winner", "result") else None
+    if sm:
+        p3 = (f"<span class='k'{A(a + .1, 'pop')}>몇 점에 붙었나?</span><div class='h2'{A(a + .3)}>당첨 가점<br>커트라인</div>"
+              f"<div class='big breathe'{A(a + .8, 'left')}>{big_count(sm.group(1), a + .8)}<small>점부터</small></div>"
+              f"<div class='note'{A(a + 1.3)}>{e(('가장 낮은 당첨 점수' + sm.group(2)).strip())}"
+              f"{' · 최고 ' + sm.group(3) + '점' if sm.group(3) else ''}</div>")
     else:
-        head3 = ("<span class='k'>언제 넣나요?</span><div class='title' style='font-size:88px'>청약 일정</div>" if kind == "open"
-                 else "<span class='k'>당첨됐다면</span><div class='title' style='font-size:88px'>다음 일정</div>")
-        rows = sched_rows(d, today)
+        keep = ("특별공급", "1순위", "2순위", "청약 접수", "당첨자 발표", "계약", "입주")
+        has1 = any(k.startswith("1순위") for k, _ in d["sched"])
+        items = []
+        for k, v in d["sched"]:
+            if not k.startswith(keep) or (k == "청약 접수" and has1):
+                continue
+            label, day = md(v)
+            if "~" in v and day:
+                label += " ~"
+            items.append((k, label, day == today))
         if kind != "open":
-            rows = [r for r in rows if ("계약" in r or "입주" in r or "발표" in r)] or rows
-        body3 = rows_html(rows)
-    s3a = frame(head3 + f"<div class='hide'>{body3}</div>")
-    s3b = frame(head3 + body3)
+            items = [x for x in items if x[0].startswith(("당첨자 발표", "계약", "입주"))] or items
+        rows = "".join(
+            f"<div class='row{' hot' if hot else ''}'{A(a + .7 + i * .3)}><div class='l'><span>{e(k)}"
+            f"{'<span class=tag>오늘</span>' if hot else ''}</span><span>{e(lb)}</span></div></div>"
+            for i, (k, lb, hot) in enumerate(items[:5]))
+        head = ("언제 넣나요?", "청약 일정") if kind == "open" else ("당첨됐다면", "다음 일정")
+        p3 = (f"<span class='k'{A(a + .1, 'pop')}>{head[0]}</span><div class='h2'{A(a + .3)}>{head[1]}</div>"
+              f"<div class='rows'>{rows}</div>")
 
-    # 4. 행동 유도
+    # 4. 청약콕 유입 — 주소를 가장 크게, 청약홈은 출처 줄에만
+    a = s4[0]
     if kind == "open":
-        big4, small4 = "내 가점으로<br><span style='color:%s'>될까?</span>" % C["blue"], "청약콕 가점 계산기로 1분이면 확인해요"
-        btn = ("저장해 두고 접수일에 꺼내 보세요", "일정·분양가·평당가 한 페이지 정리 → cheongyakkok.com")
+        msg = "내 가점으로<br><span style='color:%s'>될까?</span>" % C["blue"]
+        sub4 = "청약콕 가점 계산기로 1분이면 확인해요"
     else:
-        big4, small4 = "당첨 확인은<br><span style='color:%s'>청약홈</span>에서" % C["blue"], "주택형별 경쟁률·커트라인은 청약콕에 정리했어요"
-        btn = ("다음 청약 준비는 저장부터", "이번 주 청약 일정 → cheongyakkok.com")
-    foot = f"<div class='foot'>출처: 한국부동산원 청약홈 분양정보 · {today.month}월 {today.day}일 기준<br>청약 전 입주자모집공고 원문을 꼭 확인하세요</div>"
-    s4 = frame(f"<div class='title' style='margin-top:200px'>{big4}</div><div class='sub'>{e(small4)}</div>",
-               f"<div class='cta'><b>{e(btn[0])}</b><span>{e(btn[1])}</span></div>{foot}")
-    return [(s1a, 1.1), (s1b, 2.5), (s2a, 0.8), (s2b, 3.2), (s3a, 0.8), (s3b, 3.1), (s4, 3.5)]
+        msg = "경쟁률·커트라인<br><span style='color:%s'>청약콕</span>에 다 있어요" % C["blue"]
+        sub4 = "주택형별 경쟁률 · 당첨 가점 · 평당가 한 페이지"
+    p4 = (f"<div class='title' style='margin-top:120px'{A(a + .1)}>{msg}</div><div class='sub'{A(a + .45)}>{e(sub4)}</div>"
+          f"<div class='url breathe'{A(a + .8, 'pop')}><b>cheongyakkok.com</b><span>프로필 링크 → 단지 이름 검색</span></div>"
+          f"<div class='save'{A(a + 1.3)}>📌 저장해 두고 부모님·지인께 공유하세요</div>"
+          f"<div class='foot' style='left:0;right:0;bottom:110px'>데이터: 한국부동산원 청약홈 분양정보 · "
+          f"{today.month}월 {today.day}일 기준 · 청약 전 입주자모집공고 원문 확인</div>")
+
+    body = "".join(f"<div class='scene' data-s='{s:.2f}' data-e='{en:.2f}'>{p}</div>"
+                   for (s, en), p in zip(SCENES, (p1, p2, p3, p4)))
+    return (f"<!doctype html><html><head><meta charset='utf-8'><style>{CSS}</style></head><body>"
+            f"<div id='glow'></div><div id='glow2'></div>"
+            f"<div class='top'><span class='chipb'>청약콕</span><span>cheongyakkok.com</span></div>"
+            f"<div class='track'><div id='bar'></div></div>{body}<script>{JS}</script></body></html>")
 
 
-# ---------------- 렌더 ----------------
-def render(scs, out_mp4):
+# ---------------- 렌더: 30fps 프레임 → mp4 ----------------
+def launch(p):
+    for ch in ("msedge", "chrome", None):  # 설치된 Edge/크롬 사용(플레이라이트 브라우저 내려받기 불필요)
+        try:
+            return p.chromium.launch(channel=ch) if ch else p.chromium.launch()
+        except Exception:
+            continue
+    raise RuntimeError("브라우저 실행 실패")
+
+
+def render(page_html, out_mp4):
     from playwright.sync_api import sync_playwright
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="cyreel_"))
-    pngs = []
-    with sync_playwright() as p:
-        b = None
-        for ch in ("msedge", "chrome", None):  # 설치된 Edge/크롬 사용(플레이라이트 브라우저 내려받기 불필요)
-            try:
-                b = p.chromium.launch(channel=ch) if ch else p.chromium.launch()
-                break
-            except Exception:
-                continue
-        pg = b.new_page(viewport={"width": W, "height": H})
-        for i, (h, _) in enumerate(scs):
-            pg.set_content(h)
-            pg.wait_for_timeout(120)
-            f = tmp / f"s{i}.png"
-            pg.screenshot(path=str(f))
-            pngs.append(f)
-        b.close()
-    X = 0.25  # 장면 사이 겹침(크로스페이드)
-    durs = [d for _, d in scs]
-    total = sum(durs)
-    cmd = ["ffmpeg", "-v", "error", "-y"]
-    for f, d in zip(pngs, durs):
-        cmd += ["-loop", "1", "-framerate", "30", "-t", f"{d + X:.2f}", "-i", str(f)]
-    fc, last, off = [], "[0:v]", 0.0
-    for i in range(1, len(pngs)):
-        off += durs[i - 1]
-        fc.append(f"{last}[{i}:v]xfade=transition=fade:duration={X}:offset={off:.2f}[x{i}]")
-        last = f"[x{i}]"
-    n = len(pngs)
-    fc.append(f"color=c=0x1D63DB:s=936x8:r=30:d={total:.2f}[bar]")
-    fc.append(f"{last}[bar]overlay=x='72-936+936*t/{total:.2f}':y=132:shortest=1,format=yuv420p[v]")
-    if BGM.exists():
-        cmd += ["-stream_loop", "-1", "-i", str(BGM)]
-    cmd += ["-filter_complex", ";".join(fc), "-map", "[v]"]
-    if BGM.exists():
-        cmd += ["-map", f"{n}:a", "-af", f"volume=0.8,afade=t=out:st={total - 1.2:.2f}:d=1.2", "-c:a", "aac", "-b:a", "128k"]
-    cmd += ["-t", f"{total:.2f}", "-r", "30", "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-            "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out_mp4)]
-    subprocess.run(cmd, check=True)
+    n = int(T * FPS)
     cover = pathlib.Path(out_mp4).with_suffix(".jpg")
-    from PIL import Image
-    Image.open(pngs[1]).convert("RGB").save(cover, "JPEG", quality=90)
+    with sync_playwright() as p:
+        b = launch(p)
+        pg = b.new_page(viewport={"width": W, "height": H})
+        pg.set_content(page_html)
+        pg.wait_for_timeout(300)
+        for i in range(n):
+            pg.evaluate(f"R({i / FPS:.4f})")
+            pg.screenshot(path=str(tmp / f"f{i:04d}.jpg"), type="jpeg", quality=92)
+        pg.evaluate("R(3.2)")
+        pg.screenshot(path=str(cover), type="jpeg", quality=90)
+        b.close()
+    cmd = ["ffmpeg", "-v", "error", "-y", "-framerate", str(FPS), "-i", str(tmp / "f%04d.jpg")]
+    if BGM.exists():
+        cmd += ["-stream_loop", "-1", "-i", str(BGM), "-map", "0:v", "-map", "1:a",
+                "-af", f"volume=0.85,afade=t=in:d=0.4,afade=t=out:st={T - 1.2:.2f}:d=1.2", "-c:a", "aac", "-b:a", "128k"]
+    cmd += ["-t", f"{T:.2f}", "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart", str(out_mp4)]
+    subprocess.run(cmd, check=True)
     shutil.rmtree(tmp, ignore_errors=True)
     return cover
 
@@ -288,7 +313,7 @@ def make(slug, kind, out_mp4, today=None, site=ROOT / "site"):
         raise ValueError(f"단지 페이지에서 이름·분양가를 못 읽음: {slug}")
     out_mp4 = pathlib.Path(out_mp4)
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
-    cover = render(scenes(d, kind, today), out_mp4)
+    cover = render(scenes_html(d, kind, today), out_mp4)
     return {"video": str(out_mp4), "cover": str(cover), "name": d["name"]}
 
 
