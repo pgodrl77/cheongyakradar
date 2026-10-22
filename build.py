@@ -1228,7 +1228,7 @@ MANIFEST = {
     "short_name": "청약콕",
     "description": "아파트 청약 일정, 분양가, 경쟁률, 청약 달력을 매일 정리합니다.",
     "lang": "ko",
-    "start_url": "/?source=pwa",
+    "start_url": "/",
     "scope": "/",
     "display": "standalone",
     "background_color": "#FFFFFF",
