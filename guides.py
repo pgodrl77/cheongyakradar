@@ -175,3 +175,8 @@ from guides_partB import GUIDES_B, EXTRA_B  # noqa: E402
 GUIDES += GUIDES_A + GUIDES_B
 EXTRA.update(EXTRA_A)
 EXTRA.update(EXTRA_B)
+
+# ── 2026-11-10 추가: 서치콘솔 빈칸 검색어·보충 주제 글(guides_gsc) ──
+from guides_gsc import GUIDES_G, EXTRA_G  # noqa: E402
+GUIDES += GUIDES_G
+EXTRA.update(EXTRA_G)
