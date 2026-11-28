@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Sitemap: https://cheongyakkok.com/sitemap.xml
+
+#DaumWebMasterTool:7326a686c977643e4f73531775a435401466ba28dea1c4eddda05fb6f9c1e45a:zgfNBpWN9qxCw+eDaoF1MQ==
